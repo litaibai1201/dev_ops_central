@@ -1,0 +1,1 @@
+import React from 'react';\nimport { Button, Card } from 'antd';\n\nconst TestPage: React.FC = () => {\n  return (\n    <div style={{ padding: '20px' }}>\n      <Card title=\"测试页面\">\n        <p>如果你能看到这个页面，说明基础配置是正常的。</p>\n        <Button type=\"primary\">测试按钮</Button>\n      </Card>\n    </div>\n  );\n};\n\nexport default TestPage;\n

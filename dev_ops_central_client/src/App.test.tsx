@@ -1,0 +1,1 @@
+import React from 'react';\nimport { ConfigProvider } from 'antd';\nimport zhCN from 'antd/locale/zh_CN';\nimport TestPage from './TestPage';\n\nconst App: React.FC = () => {\n  return (\n    <ConfigProvider locale={zhCN}>\n      <TestPage />\n    </ConfigProvider>\n  );\n};\n\nexport default App;\n
