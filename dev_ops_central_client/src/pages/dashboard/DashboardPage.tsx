@@ -183,13 +183,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ user }) => {
 
   // 快捷操作处理函数
   const handleCreateProject = () => {
-    // TODO: 打开创建专案模态框或跳转到创建页面
-    console.log('创建专案');
+    navigate('/projects/create');
   };
 
   const handleCreateGroup = () => {
-    // TODO: 打开创建群组模态框或跳转到创建页面
-    console.log('创建群组');
+    navigate('/groups/create');
   };
 
   const filteredProjects = projects.filter(project =>

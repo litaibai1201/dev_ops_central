@@ -7,8 +7,10 @@ import MainLayout from './components/layout/MainLayout';
 import AuthPage from './pages/auth/AuthPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ProjectDetailPage from './pages/projects/ProjectDetailPage';
+import CreateProjectPage from './pages/projects/CreateProjectPage';
 import ApiDetailPage from './pages/apis/ApiDetailPage';
 import GroupManagementPage from './pages/groups/GroupManagementPage';
+import CreateGroupPage from './pages/groups/CreateGroupPage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -69,11 +71,13 @@ const App: React.FC = () => {
               
               {/* 专案管理 */}
               <Route path="/projects" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/projects/create" element={<CreateProjectPage user={user} />} />
               <Route path="/projects/:projectId" element={<ProjectDetailPage user={user} />} />
               <Route path="/projects/:projectId/apis/:apiId" element={<ApiDetailPage user={user} />} />
               
               {/* 群组管理 */}
               <Route path="/groups" element={<GroupManagementPage user={user} />} />
+              <Route path="/groups/create" element={<CreateGroupPage user={user} />} />
               
               {/* 系统管理员路由 */}
               {user.role === 'system_admin' && (
