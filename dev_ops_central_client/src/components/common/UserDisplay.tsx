@@ -37,10 +37,16 @@ const UserDisplay: React.FC<UserDisplayProps> = ({
   const fonts = getFontSizes(size);
 
   const userInfo = (
-    <div>
+    <div style={{ minWidth: 0, flex: 1 }}>
       <div 
-        className="font-medium"
-        style={{ fontSize: fonts.username }}
+        className="font-medium user-info-text"
+        style={{ 
+          fontSize: fonts.username,
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          lineHeight: '1.4'
+        }}
       >
         {username}
         {showCrown && (
@@ -52,8 +58,14 @@ const UserDisplay: React.FC<UserDisplayProps> = ({
       </div>
       {showEmail && email && (
         <div 
-          className="text-gray-500"
-          style={{ fontSize: fonts.email }}
+          className="text-gray-500 user-info-text"
+          style={{ 
+            fontSize: fonts.email,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            lineHeight: '1.3'
+          }}
         >
           {email}
         </div>
@@ -69,6 +81,11 @@ const UserDisplay: React.FC<UserDisplayProps> = ({
           src={avatar} 
           icon={<UserOutlined />} 
           className="mb-2"
+          style={{
+            border: '2px solid #e8e8e8',
+            backgroundColor: avatar ? 'transparent' : '#1890ff',
+            transition: 'all 0.3s ease'
+          }}
         />
         {userInfo}
       </div>
@@ -76,12 +93,24 @@ const UserDisplay: React.FC<UserDisplayProps> = ({
   }
 
   return (
-    <div className="flex items-center" style={style}>
+    <div 
+      className="flex items-center" 
+      style={{ 
+        gap: '12px',
+        minWidth: 0,
+        ...style 
+      }}
+    >
       <Avatar 
         size={avatarSize} 
         src={avatar} 
         icon={<UserOutlined />} 
-        className="mr-2"
+        style={{
+          border: '2px solid #e8e8e8',
+          backgroundColor: avatar ? 'transparent' : '#1890ff',
+          flexShrink: 0,
+          transition: 'all 0.3s ease'
+        }}
       />
       {userInfo}
     </div>

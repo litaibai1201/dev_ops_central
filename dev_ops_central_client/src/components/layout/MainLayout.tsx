@@ -119,8 +119,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, user, onLogout }) => 
   const getRoleDisplayName = (role: string) => {
     const roleMap = {
       user: '普通用户',
-      project_admin: '专案管理员',
-      group_owner: '群主',
       system_admin: '系统管理员'
     };
     return roleMap[role as keyof typeof roleMap] || '未知角色';
@@ -239,34 +237,67 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, user, onLogout }) => 
                 </Badge>
                 
                 <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-                  <Space style={{ 
+                  <div style={{ 
                     cursor: 'pointer', 
-                    padding: '4px 8px', 
-                    borderRadius: '4px'
+                    padding: '8px 12px', 
+                    borderRadius: '8px',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    minWidth: isMobile ? 'auto' : '140px'
                   }}
+                    className="user-dropdown-trigger"
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f5f5f5';
+                      e.currentTarget.style.backgroundColor = '#f8f9fa';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
                     <Avatar 
-                      size="small" 
+                      size={32}
                       icon={<UserOutlined />} 
                       src={user.avatar}
+                      style={{
+                        border: '2px solid #e8e8e8',
+                        backgroundColor: user.avatar ? 'transparent' : '#1890ff'
+                      }}
                     />
                     {!isMobile && (
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 500 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div 
+                          className="user-info-text"
+                          style={{ 
+                            fontSize: '14px', 
+                            fontWeight: 600,
+                            color: '#262626',
+                            lineHeight: '20px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
                           {user.username}
                         </div>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
+                        <div 
+                          className="user-info-text"
+                          style={{ 
+                            fontSize: '12px', 
+                            color: '#8c8c8c',
+                            lineHeight: '16px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
+                          }}
+                        >
                           {getRoleDisplayName(user.role)}
                         </div>
                       </div>
                     )}
-                  </Space>
+                  </div>
                 </Dropdown>
               </Space>
             </div>

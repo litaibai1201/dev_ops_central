@@ -83,6 +83,81 @@ code {
   .ant-layout {
     margin-left: 0 !important;
   }
+  
+  /* 移动端用户显示优化 */
+  .user-dropdown-trigger {
+    min-width: auto !important;
+    padding: 6px 8px !important;
+  }
+  
+  .user-dropdown-trigger .ant-avatar {
+    width: 28px !important;
+    height: 28px !important;
+  }
+}
+
+/* 用户显示组件样式 */
+.user-dropdown-trigger {
+  position: relative;
+  overflow: hidden;
+}
+
+.user-dropdown-trigger::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s;
+}
+
+.user-dropdown-trigger:hover::before {
+  left: 100%;
+}
+
+.user-dropdown-trigger:active {
+  transform: scale(0.98);
+}
+
+/* Avatar 增强样式 */
+.ant-avatar {
+  transition: all 0.3s ease;
+}
+
+.user-dropdown-trigger:hover .ant-avatar {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+/* 下拉菜单样式优化 */
+.ant-dropdown-menu {
+  border-radius: 8px !important;
+  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.08), 0 9px 28px 0 rgba(0, 0, 0, 0.05), 0 3px 6px -4px rgba(0, 0, 0, 0.12) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.ant-dropdown-menu-item {
+  border-radius: 6px !important;
+  margin: 4px 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+.ant-dropdown-menu-item:hover {
+  background-color: #f0f7ff !important;
+  transform: translateX(2px);
+}
+
+.ant-dropdown-menu-item-divider {
+  margin: 8px 6px !important;
+  border-top: 1px solid #f0f0f0 !important;
+}
+
+/* 通知徽章样式 */
+.ant-badge-count {
+  background: linear-gradient(135deg, #ff6b6b, #ff5252) !important;
+  box-shadow: 0 2px 4px rgba(255, 107, 107, 0.3) !important;
 }
 
 /* 自定义工具类 */
@@ -169,6 +244,32 @@ code {
 }
 
 .hidden { display: none; }
+
+/* 用户信息文本动画 */
+.user-info-text {
+  transition: all 0.2s ease;
+}
+
+.user-dropdown-trigger:hover .user-info-text {
+  color: #1890ff;
+}
+
+/* 加载状态 */
+.user-avatar-loading {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
 
 /* 响应式类 */
 @media (min-width: 640px) {

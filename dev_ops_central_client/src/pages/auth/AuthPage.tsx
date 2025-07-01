@@ -22,9 +22,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
         id: '1',
         username: values.username,
         email: 'user@example.com',
-        role: values.username === 'admin' ? 'system_admin' : 
-              values.username === 'groupowner' ? 'group_owner' :
-              values.username === 'projectadmin' ? 'project_admin' : 'user',
+        role: values.username === 'admin' ? 'system_admin' : 'user',
         avatar: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -249,8 +247,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           lineHeight: '1.4'
         }}>
           <p style={{ margin: '4px 0' }}>测试账号：</p>
-          <p style={{ margin: '4px 0' }}>管理员: admin / 群主: groupowner</p>
-          <p style={{ margin: '4px 0' }}>专案管理员: projectadmin / 普通用户: user</p>
+          <p style={{ margin: '4px 0' }}>管理员: admin / 普通用户: user</p>
           <p style={{ margin: '4px 0' }}>密码随意</p>
         </div>
       </Card>
