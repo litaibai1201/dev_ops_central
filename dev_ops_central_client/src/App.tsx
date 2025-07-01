@@ -11,6 +11,7 @@ import CreateProjectPage from './pages/projects/CreateProjectPage';
 import ApiDetailPage from './pages/apis/ApiDetailPage';
 import GroupManagementPage from './pages/groups/GroupManagementPage';
 import CreateGroupPage from './pages/groups/CreateGroupPage';
+import GroupDetailPage from './pages/groups/GroupDetailPage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -78,6 +79,7 @@ const App: React.FC = () => {
               {/* 群组管理 */}
               <Route path="/groups" element={<GroupManagementPage user={user} />} />
               <Route path="/groups/create" element={<CreateGroupPage user={user} />} />
+              <Route path="/groups/:groupId" element={<GroupDetailPage user={user} />} />
               
               {/* 系统管理员路由 */}
               {user.role === 'system_admin' && (

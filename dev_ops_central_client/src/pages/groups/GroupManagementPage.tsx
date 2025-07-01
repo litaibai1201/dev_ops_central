@@ -268,7 +268,14 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
               className="mr-3 bg-blue-500"
             />
             <div>
-              <div className="font-medium text-lg">{record.name}</div>
+              <div 
+                className="font-medium text-lg cursor-pointer hover:text-blue-500 transition-colors"
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate(`/groups/${record.id}`)}
+                title="点击查看群组详情"
+              >
+                {record.name}
+              </div>
               <div className="text-sm text-gray-500">{record.description}</div>
             </div>
           </div>
@@ -315,18 +322,35 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
       width: 200,
       render: (_, record) => {
         const isOwner = record.ownerId === user.id;
-        const isAdmin = user.role === 'system_admin';
+        const isSystemAdmin = user.role === 'system_admin';
         
-        const actions = [
-          createViewAction(() => navigate(`/groups/${record.id}`))
-        ];
-
-        if (isOwner || isAdmin) {
+        // 获取用户在该群组中的成员信息
+        const memberInfo = record.members.find(member => member.userId === user.id);
+        const isMember = !!memberInfo;
+        const isGroupAdmin = memberInfo?.role === 'admin';
+        
+        const actions = [];
+        
+        // 所有用户都可以查看（如果是成员或系统管理员）
+        if (isMember || isSystemAdmin) {
+          actions.push(
+            createViewAction(() => navigate(`/groups/${record.id}`))
+          );
+        }
+        
+        // 编辑权限：群主、群组管理员、系统管理员
+        if (isOwner || isGroupAdmin || isSystemAdmin) {
           actions.push(
             createEditAction(() => {
               setSelectedGroup(record);
               setEditModalVisible(true);
-            }),
+            })
+          );
+        }
+        
+        // 删除权限：只有群主和系统管理员
+        if (isOwner || isSystemAdmin) {
+          actions.push(
             createDeleteAction(handleDeleteGroup, record.name)
           );
         }

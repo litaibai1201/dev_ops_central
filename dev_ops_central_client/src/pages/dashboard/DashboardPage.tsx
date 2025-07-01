@@ -151,30 +151,51 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ user }) => {
     } catch (error) {
       console.error('获取用户群组失败:', error);
       // 使用模拟数据作为后备
-      const mockGroups: Group[] = [
-        {
-          id: '1',
-          name: '前端开发组',
-          description: '负责前端相关项目开发',
-          ownerId: user.id, // 假设当前用户是群主
+      const mockGroups: Group[] = [];
+      
+      // 为groupuser添加测试群组
+      if (user.username === 'groupuser') {
+        mockGroups.push({
+          id: '10',
+          name: '测试开发组',
+          description: '用于测试创建专案功能的群组',
+          ownerId: user.id, // groupuser作为群主
           owner: user,
           members: [],
-          projectCount: 3,
+          projectCount: 0,
           createdAt: '2024-01-01',
           updatedAt: '2024-01-01'
-        },
-        {
-          id: '2',
-          name: '后端开发组',
-          description: '负责后端服务开发',
-          ownerId: 'other-user-id',
-          owner: {} as User,
-          members: [],
-          projectCount: 5,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        }
-      ];
+        });
+      }
+      
+      // 其他用户的模拟数据
+      if (user.username !== 'groupuser') {
+        mockGroups.push(
+          {
+            id: '1',
+            name: '前端开发组',
+            description: '负责前端相关项目开发',
+            ownerId: user.username === 'user' ? user.id : 'other-user-id',
+            owner: user.username === 'user' ? user : {} as User,
+            members: [],
+            projectCount: 3,
+            createdAt: '2024-01-01',
+            updatedAt: '2024-01-01'
+          },
+          {
+            id: '2',
+            name: '后端开发组',
+            description: '负责后端服务开发',
+            ownerId: 'other-user-id',
+            owner: {} as User,
+            members: [],
+            projectCount: 5,
+            createdAt: '2024-01-01',
+            updatedAt: '2024-01-01'
+          }
+        );
+      }
+      
       setUserGroups(mockGroups);
       const owned = mockGroups.filter(group => group.ownerId === user.id);
       setOwnedGroups(owned);

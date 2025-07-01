@@ -19,7 +19,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
       
       // 模拟用户数据
       const userData = {
-        id: '1',
+        id: values.username === 'groupuser' ? '10' : '1',
         username: values.username,
         email: 'user@example.com',
         role: values.username === 'admin' ? 'system_admin' : 'user',
@@ -247,7 +247,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           lineHeight: '1.4'
         }}>
           <p style={{ margin: '4px 0' }}>测试账号：</p>
-          <p style={{ margin: '4px 0' }}>管理员: admin / 普通用户: user</p>
+          <p style={{ margin: '4px 0' }}>管理员: admin / 群主: groupuser / 普通用户: user</p>
           <p style={{ margin: '4px 0' }}>密码随意</p>
         </div>
       </Card>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Breadcrumb } from 'antd';
-import { HomeOutlined, ApiOutlined, ProjectOutlined, UserOutlined } from '@ant-design/icons';
+import { HomeOutlined, ApiOutlined, ProjectOutlined, UserOutlined, TeamOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { usePageContext } from './PageContext';
 
@@ -23,7 +23,7 @@ const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { apiName } = usePageContext();
+  const { apiName, groupName } = usePageContext();
 
   // 如果没有传入 items，根据当前路径自动生成
   const generateBreadcrumbItems = (): PageBreadcrumbItem[] => {
@@ -73,9 +73,25 @@ const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
         }
       }
     } else if (pathSegments[0] === 'groups') {
-      breadcrumbItems.push({
-        title: '群组管理'
-      });
+      if (pathSegments.length === 1) {
+        breadcrumbItems.push({
+          title: (
+            <span>
+              <TeamOutlined style={{ marginRight: '4px' }} />
+              群组管理
+            </span>
+          )
+        });
+      } else if (pathSegments.length >= 2) {
+        breadcrumbItems.push({
+          title: '群组管理',
+          href: '/groups'
+        });
+        // 群组详情页面，显示群组名称
+        breadcrumbItems.push({
+          title: groupName || '群组详情'
+        });
+      }
     } else if (pathSegments[0] === 'users') {
       breadcrumbItems.push({
         title: (

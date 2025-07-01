@@ -98,30 +98,49 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
     } catch (error) {
       console.error('获取群组失败:', error);
       // 使用模拟数据
-      const mockGroups: Group[] = [
-        {
-          id: '1',
-          name: '前端开发组',
-          description: '负责前端相关项目开发',
+      const mockGroups: Group[] = [];
+      
+      // 为groupuser添加测试群组
+      if (user.username === 'groupuser') {
+        mockGroups.push({
+          id: '10',
+          name: '测试开发组',
+          description: '用于测试创建专案功能的群组',
           ownerId: user.id,
           owner: user,
           members: [],
-          projectCount: 3,
+          projectCount: 0,
           createdAt: '2024-01-01',
           updatedAt: '2024-01-01'
-        },
-        {
-          id: '2',
-          name: '全栈开发组',
-          description: '负责全栈应用开发',
-          ownerId: user.id,
-          owner: user,
-          members: [],
-          projectCount: 2,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        }
-      ];
+        });
+      } else {
+        // 其他用户的模拟数据
+        mockGroups.push(
+          {
+            id: '1',
+            name: '前端开发组',
+            description: '负责前端相关项目开发',
+            ownerId: user.id,
+            owner: user,
+            members: [],
+            projectCount: 3,
+            createdAt: '2024-01-01',
+            updatedAt: '2024-01-01'
+          },
+          {
+            id: '2',
+            name: '全栈开发组',
+            description: '负责全栈应用开发',
+            ownerId: user.id,
+            owner: user,
+            members: [],
+            projectCount: 2,
+            createdAt: '2024-01-01',
+            updatedAt: '2024-01-01'
+          }
+        );
+      }
+      
       setOwnedGroups(mockGroups);
       
       if (mockGroups.length === 1) {

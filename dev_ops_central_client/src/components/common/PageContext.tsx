@@ -5,6 +5,8 @@ interface PageContextType {
   setApiName: (name: string) => void;
   projectName?: string;
   setProjectName: (name: string) => void;
+  groupName?: string;
+  setGroupName: (name: string) => void;
 }
 
 const PageContext = createContext<PageContextType | undefined>(undefined);
@@ -16,12 +18,15 @@ interface PageProviderProps {
 export const PageProvider: React.FC<PageProviderProps> = ({ children }) => {
   const [apiName, setApiName] = useState<string>('');
   const [projectName, setProjectName] = useState<string>('');
+  const [groupName, setGroupName] = useState<string>('');
 
   const value = {
     apiName,
     setApiName,
     projectName,
     setProjectName,
+    groupName,
+    setGroupName,
   };
 
   return (

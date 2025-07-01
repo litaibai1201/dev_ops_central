@@ -10,15 +10,12 @@ import {
   message,
   Tag,
   Popconfirm,
-  AutoComplete,
   Row,
-  Col,
-  Divider
+  Col
 } from 'antd';
 import {
   UserAddOutlined,
   DeleteOutlined,
-  PlusOutlined,
   TeamOutlined,
   CheckCircleOutlined
 } from '@ant-design/icons';
@@ -35,6 +32,7 @@ interface GroupMemberItem {
   user: User;
   role: 'owner' | 'admin' | 'member';
   employeeId?: string;
+  department?: string;
 }
 
 interface CreateGroupPageProps {
@@ -57,12 +55,14 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
         ...user,
         email: user.email || 'user@example.com'
       },
-      role: 'owner'
+      role: 'owner',
+      employeeId: user.username,
+      department: '技术部'
     };
     setMembers([ownerMember]);
   }, [user]);
 
-  // 模拟用户搜索
+  // 模拟用户搜索（工号或姓名）
   const handleUserSearch = async (value: string) => {
     if (!value) {
       setSearchUsers([]);
@@ -101,12 +101,11 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
         }
       ];
       
-      // 过滤已添加的成员和搜索关键词
+      // 过滤已添加的成员和搜索关键词（工号或姓名）
       const existingUserIds = members.map(m => m.user.id);
       const filteredUsers = mockUsers.filter(u => 
         !existingUserIds.includes(u.id) &&
-        (u.username.toLowerCase().includes(value.toLowerCase()) ||
-         u.email.toLowerCase().includes(value.toLowerCase()))
+        u.username.toLowerCase().includes(value.toLowerCase())
       );
       
       setSearchUsers(filteredUsers);
@@ -119,11 +118,15 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
 
   // 添加成员
   const handleAddMember = (selectedUser: User, role: 'admin' | 'member' = 'member') => {
+    const departments = ['技术部', '产品部', '设计部', '运营部', '市场部'];
+    const randomDepartment = departments[Math.floor(Math.random() * departments.length)];
+    
     const newMember: GroupMemberItem = {
       id: Date.now().toString(),
       user: selectedUser,
       role,
-      employeeId: selectedUser.username // 模拟工号
+      employeeId: selectedUser.username, // 模拟工号
+      department: randomDepartment
     };
     
     setMembers(prev => [...prev, newMember]);
@@ -144,25 +147,36 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
     );
   };
 
-  // 通过工号添加成员
-  const handleAddByEmployeeId = async (employeeId: string) => {
-    if (!employeeId.trim()) return;
+  // 通过工号或姓名添加成员
+  const handleAddByEmployeeId = async (searchValue: string) => {
+    if (!searchValue.trim()) return;
     
     try {
-      // 模拟通过工号查找用户
+      // 模拟通过工号或姓名查找用户
+      const departments = ['技术部', '产品部', '设计部', '运营部', '市场部'];
+      const randomDepartment = departments[Math.floor(Math.random() * departments.length)];
+      
       const mockUser: User = {
         id: Date.now().toString(),
-        username: employeeId,
-        email: `${employeeId}@company.com`,
+        username: searchValue,
+        email: `${searchValue}@company.com`,
         role: 'user',
         createdAt: '2024-01-01',
         updatedAt: '2024-01-01'
       };
       
-      handleAddMember(mockUser, 'member');
-      message.success(`已添加用户 ${employeeId}`);
+      const newMember: GroupMemberItem = {
+        id: Date.now().toString(),
+        user: mockUser,
+        role: 'member',
+        employeeId: searchValue,
+        department: randomDepartment
+      };
+      
+      setMembers(prev => [...prev, newMember]);
+      message.success(`已添加用户 ${searchValue}`);
     } catch (error) {
-      message.error('未找到该工号对应的用户');
+      message.error('未找到该工号或姓名对应的用户');
     }
   };
 
@@ -205,20 +219,26 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
   // 成员表格列定义
   const memberColumns: ColumnsType<GroupMemberItem> = [
     {
-      title: '用户名',
+      title: '姓名',
       dataIndex: ['user', 'username'],
       key: 'username',
-    },
-    {
-      title: '邮箱',
-      dataIndex: ['user', 'email'],
-      key: 'email',
     },
     {
       title: '工号',
       dataIndex: 'employeeId',
       key: 'employeeId',
       render: (employeeId) => employeeId || '-',
+    },
+    {
+      title: '部门',
+      dataIndex: 'department',
+      key: 'department',
+      render: (department) => department || '-',
+    },
+    {
+      title: '邮箱',
+      dataIndex: ['user', 'email'],
+      key: 'email',
     },
     {
       title: '角色',
@@ -288,180 +308,155 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
       <PageHeader
         title="创建群组"
         subtitle="创建新的团队群组，邀请成员协作开发"
-        onBack={() => navigate(-1)}
+        actions={[
+          {
+            key: 'back',
+            text: '返回',
+            type: 'default',
+            onClick: () => navigate(-1)
+          }
+        ]}
       />
 
-      <Card>
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          size="large"
-        >
-          <Row gutter={24}>
-            <Col xs={24} lg={12}>
-              {/* 基本信息 */}
-              <Card 
-                size="small" 
-                title={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <TeamOutlined style={{ color: '#1890ff' }} />
-                    <span>基本信息</span>
-                  </div>
-                }
-                style={{ marginBottom: '24px' }}
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        size="large"
+      >
+        <Row gutter={24}>
+          <Col xs={24} lg={12}>
+            {/* 基本信息 */}
+            <Card 
+              title={
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <TeamOutlined style={{ color: '#1890ff' }} />
+                  <span>基本信息</span>
+                </div>
+              }
+              style={{ marginBottom: '24px' }}
+            >
+              <Form.Item
+                name="groupName"
+                label="群组名称"
+                rules={[{ validator: validateGroupName }]}
               >
-                <Form.Item
-                  name="groupName"
-                  label="群组名称"
-                  rules={[{ validator: validateGroupName }]}
-                >
-                  <Input
-                    placeholder="请输入群组名称（只允许中英文、数字、下划线和短横线）"
-                    maxLength={50}
-                    showCount
-                  />
-                </Form.Item>
+                <Input
+                  placeholder="请输入群组名称（只允许中英文、数字、下划线和短横线）"
+                  maxLength={50}
+                  showCount
+                />
+              </Form.Item>
 
-                <Form.Item
-                  name="description"
-                  label="群组描述"
-                  rules={[
-                    { required: true, message: '请输入群组描述' },
-                    { min: 10, message: '描述至少需要10个字符' },
-                    { max: 500, message: '描述不能超过500个字符' }
-                  ]}
-                >
-                  <TextArea
-                    placeholder="请描述群组的用途、目标或工作范围..."
-                    rows={4}
-                    maxLength={500}
-                    showCount
-                  />
-                </Form.Item>
-              </Card>
-            </Col>
-            
-            <Col xs={24} lg={12}>
-              {/* 添加成员 */}
-              <Card 
-                size="small" 
-                title={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <UserAddOutlined style={{ color: '#52c41a' }} />
-                    <span>添加成员</span>
-                  </div>
-                }
-                style={{ marginBottom: '24px' }}
+              <Form.Item
+                name="description"
+                label="群组描述"
+                rules={[
+                  { required: true, message: '请输入群组描述' },
+                  { min: 10, message: '描述至少需要10个字符' },
+                  { max: 500, message: '描述不能超过500个字符' }
+                ]}
               >
-                <Space direction="vertical" style={{ width: '100%' }} size="middle">
-                  {/* 通过用户名/邮箱搜索 */}
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-                      搜索用户
-                    </label>
-                    <AutoComplete
-                      style={{ width: '100%' }}
-                      placeholder="输入用户名或邮箱搜索"
-                      onSearch={handleUserSearch}
-                      loading={searchLoading}
-                      options={searchUsers.map(user => ({
-                        key: user.id,
-                        value: user.username,
-                        label: (
-                          <div 
-                            style={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between',
-                              alignItems: 'center'
-                            }}
-                            onClick={() => handleAddMember(user)}
-                          >
-                            <div>
-                              <div style={{ fontWeight: 500 }}>{user.username}</div>
-                              <div style={{ fontSize: '12px', color: '#666' }}>{user.email}</div>
-                            </div>
-                            <PlusOutlined style={{ color: '#1890ff' }} />
-                          </div>
-                        )
-                      }))}
-                    />
-                  </div>
-
-                  <Divider style={{ margin: '12px 0' }}>或</Divider>
-
-                  {/* 通过工号添加 */}
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-                      工号添加
-                    </label>
-                    <Input.Search
-                      placeholder="输入员工工号"
-                      enterButton="添加"
-                      onSearch={handleAddByEmployeeId}
-                    />
-                  </div>
-                </Space>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* 成员列表 */}
-          <Card 
-            title={
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <TeamOutlined style={{ color: '#722ed1' }} />
-                <span>群组成员 ({members.length})</span>
+                <TextArea
+                  placeholder="请描述群组的用途、目标或工作范围..."
+                  rows={4}
+                  maxLength={500}
+                  showCount
+                />
+              </Form.Item>
+            </Card>
+          </Col>
+          
+          <Col xs={24} lg={12}>
+            {/* 添加成员 */}
+            <Card 
+              title={
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <UserAddOutlined style={{ color: '#52c41a' }} />
+                  <span>添加成员</span>
+                </div>
+              }
+              style={{ marginBottom: '24px' }}
+            >
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                  输入工号或姓名
+                </label>
+                <Input.Search
+                  placeholder="请输入员工工号或姓名"
+                  enterButton="添加"
+                  size="large"
+                  onSearch={handleAddByEmployeeId}
+                  style={{ width: '100%' }}
+                />
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#999', 
+                  marginTop: '8px',
+                  lineHeight: '1.4'
+                }}>
+                  支持通过员工工号或姓名搜索添加成员
+                </div>
               </div>
-            }
-            style={{ marginBottom: '24px' }}
-          >
-            <Table
-              columns={memberColumns}
-              dataSource={members}
-              rowKey="id"
-              pagination={false}
-              size="small"
-              locale={{
-                emptyText: '暂无成员，请添加群组成员'
-              }}
-            />
-          </Card>
+            </Card>
+          </Col>
+        </Row>
 
-          {/* 提交按钮 */}
-          <Form.Item>
-            <Space size="middle">
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                size="large"
-                icon={<CheckCircleOutlined />}
-                style={{
-                  borderRadius: '8px',
-                  height: '48px',
-                  padding: '0 32px',
-                  fontWeight: 500
-                }}
-              >
-                {loading ? '创建中...' : '创建群组'}
-              </Button>
-              
-              <Button
-                size="large"
-                onClick={() => navigate(-1)}
-                style={{
-                  borderRadius: '8px',
-                  height: '48px',
-                  padding: '0 32px'
-                }}
-              >
-                取消
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Card>
+        {/* 成员列表 */}
+        <Card 
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <TeamOutlined style={{ color: '#722ed1' }} />
+              <span>群组成员 ({members.length})</span>
+            </div>
+          }
+          style={{ marginBottom: '24px' }}
+        >
+          <Table
+            columns={memberColumns}
+            dataSource={members}
+            rowKey="id"
+            pagination={false}
+            size="small"
+            locale={{
+              emptyText: '暂无成员，请添加群组成员'
+            }}
+          />
+        </Card>
+
+        {/* 提交按钮 */}
+        <Form.Item>
+          <Space size="middle">
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={loading}
+              size="large"
+              icon={<CheckCircleOutlined />}
+              style={{
+                borderRadius: '8px',
+                height: '48px',
+                padding: '0 32px',
+                fontWeight: 500
+              }}
+            >
+              {loading ? '创建中...' : '确定'}
+            </Button>
+            
+            <Button
+              size="large"
+              onClick={() => navigate(-1)}
+              style={{
+                borderRadius: '8px',
+                height: '48px',
+                padding: '0 32px'
+              }}
+            >
+              取消
+            </Button>
+          </Space>
+        </Form.Item>
+      </Form>
     </div>
   );
 };
