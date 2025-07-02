@@ -289,7 +289,14 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
       <PageHeader
         title="创建专案"
         subtitle="在群组中创建新的API专案"
-        onBack={() => navigate(-1)}
+        actions={[
+          {
+            key: 'back',
+            text: '返回',
+            type: 'default',
+            onClick: () => navigate(-1)
+          }
+        ]}
       />
 
       <Row gutter={24}>

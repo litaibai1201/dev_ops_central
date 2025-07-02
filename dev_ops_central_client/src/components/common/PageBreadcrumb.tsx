@@ -55,6 +55,20 @@ const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
             </span>
           )
         });
+      } else if (pathSegments[1] === 'create') {
+        // 创建专案页面
+        breadcrumbItems.push({
+          title: '专案管理',
+          href: '/dashboard'
+        });
+        breadcrumbItems.push({
+          title: (
+            <span>
+              <ProjectOutlined style={{ marginRight: '4px' }} />
+              创建专案
+            </span>
+          )
+        });
       } else if (pathSegments.length >= 2) {
         breadcrumbItems.push({
           title: '专案详情',
@@ -79,6 +93,20 @@ const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
             <span>
               <TeamOutlined style={{ marginRight: '4px' }} />
               群组管理
+            </span>
+          )
+        });
+      } else if (pathSegments[1] === 'create') {
+        // 创建群组页面
+        breadcrumbItems.push({
+          title: '群组管理',
+          href: '/groups'
+        });
+        breadcrumbItems.push({
+          title: (
+            <span>
+              <TeamOutlined style={{ marginRight: '4px' }} />
+              创建群组
             </span>
           )
         });

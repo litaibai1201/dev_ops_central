@@ -39,42 +39,70 @@ const PageHeader: React.FC<PageHeaderProps> = ({
 }) => {
   return (
     <div 
-      className={`mb-6 ${className || ''}`}
-      style={style}
+      style={{
+        marginBottom: '24px',
+        ...style
+      }}
+      className={className}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between' 
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center' 
+        }}>
           {showBack && (
             <>
               <Button 
                 icon={<ArrowLeftOutlined />} 
                 onClick={onBack}
                 size="large"
+                style={{ marginRight: '16px' }}
               >
                 {backText}
               </Button>
-              <Divider type="vertical" style={{ height: '32px' }} />
+              <Divider type="vertical" style={{ height: '32px', marginRight: '16px' }} />
             </>
           )}
           <div>
-            <div className="flex items-center space-x-3 mb-2">
-              <h1 className="text-2xl font-bold text-gray-800 m-0">
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: '8px' 
+            }}>
+              <h1 style={{
+                fontSize: '24px',
+                fontWeight: 'bold',
+                color: '#1f2937',
+                margin: 0,
+                marginRight: '12px'
+              }}>
                 {title}
               </h1>
               {tags}
             </div>
             {subtitle && (
-              <p className="text-gray-600 m-0 text-base">
+              <p style={{
+                color: '#6b7280',
+                margin: 0,
+                fontSize: '16px'
+              }}>
                 {subtitle}
               </p>
             )}
           </div>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center' 
+        }}>
           {extra}
           {actions.length > 0 && (
-            <Space size="middle">
+            <Space size="middle" style={{ marginLeft: '12px' }}>
               {actions.map(action => (
                 <Button
                   key={action.key}
