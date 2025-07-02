@@ -385,10 +385,18 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
                   <Badge count={project.apiCount} showZero style={{ backgroundColor: '#1890ff' }} />
                 </Descriptions.Item>
                 <Descriptions.Item label="创建时间">
-                  {new Date(project.createdAt).toLocaleDateString()}
+                  {new Date(project.createdAt).toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  }).replace(/\//g, '年').replace(/年(\d{2})年/, '年$1月').replace(/月(\d{2})$/, '月$1日')}
                 </Descriptions.Item>
                 <Descriptions.Item label="更新时间">
-                  {new Date(project.updatedAt).toLocaleDateString()}
+                  {new Date(project.updatedAt).toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                  }).replace(/\//g, '年').replace(/年(\d{2})年/, '年$1月').replace(/月(\d{2})$/, '月$1日')}
                 </Descriptions.Item>
                 <Descriptions.Item label="标签" span={2}>
                   <div>
