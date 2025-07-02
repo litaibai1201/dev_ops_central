@@ -21,7 +21,9 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { User, GroupForm } from '../../types';
-import { PageHeader } from '../../components/common';
+import { 
+  PageHeader
+} from '../../components/common';
 import type { ColumnsType } from 'antd/es/table';
 
 const { TextArea } = Input;
@@ -43,8 +45,6 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [members, setMembers] = useState<GroupMemberItem[]>([]);
-  const [searchUsers, setSearchUsers] = useState<User[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
   const navigate = useNavigate();
 
   // 初始化时将当前用户设为群主
@@ -62,92 +62,34 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
     setMembers([ownerMember]);
   }, [user]);
 
-  // 模拟用户搜索（工号或姓名）
-  const handleUserSearch = async (value: string) => {
+  // 表单验证器
+  const validateGroupName = (_: any, value: string) => {
     if (!value) {
-      setSearchUsers([]);
-      return;
+      return Promise.reject(new Error('请输入群组名称'));
     }
-
-    setSearchLoading(true);
-    try {
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const mockUsers: User[] = [
-        {
-          id: '2',
-          username: 'alice',
-          email: 'alice@example.com',
-          role: 'user',
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        },
-        {
-          id: '3',
-          username: 'bob',
-          email: 'bob@example.com',
-          role: 'user',
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        },
-        {
-          id: '4',
-          username: 'charlie',
-          email: 'charlie@example.com',
-          role: 'user',
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        }
-      ];
-      
-      // 过滤已添加的成员和搜索关键词（工号或姓名）
-      const existingUserIds = members.map(m => m.user.id);
-      const filteredUsers = mockUsers.filter(u => 
-        !existingUserIds.includes(u.id) &&
-        u.username.toLowerCase().includes(value.toLowerCase())
-      );
-      
-      setSearchUsers(filteredUsers);
-    } catch (error) {
-      console.error('搜索用户失败:', error);
-    } finally {
-      setSearchLoading(false);
+    if (/[^a-zA-Z0-9\u4e00-\u9fa5_-]/.test(value)) {
+      return Promise.reject(new Error('群组名称不能包含特殊字符，只允许中英文、数字、下划线和短横线'));
     }
+    if (value.length < 2 || value.length > 50) {
+      return Promise.reject(new Error('群组名称长度应在2-50个字符之间'));
+    }
+    return Promise.resolve();
   };
 
-  // 添加成员
-  const handleAddMember = (selectedUser: User, role: 'admin' | 'member' = 'member') => {
-    const departments = ['技术部', '产品部', '设计部', '运营部', '市场部'];
-    const randomDepartment = departments[Math.floor(Math.random() * departments.length)];
-    
-    const newMember: GroupMemberItem = {
-      id: Date.now().toString(),
-      user: selectedUser,
-      role,
-      employeeId: selectedUser.username, // 模拟工号
-      department: randomDepartment
-    };
-    
-    setMembers(prev => [...prev, newMember]);
-    setSearchUsers([]);
+  const validateDescription = (_: any, value: string) => {
+    if (!value) {
+      return Promise.reject(new Error('请输入群组描述'));
+    }
+    if (value.length < 10) {
+      return Promise.reject(new Error('描述至少需要10个字符'));
+    }
+    if (value.length > 500) {
+      return Promise.reject(new Error('描述不能超过500个字符'));
+    }
+    return Promise.resolve();
   };
 
-  // 移除成员
-  const handleRemoveMember = (memberId: string) => {
-    setMembers(prev => prev.filter(m => m.id !== memberId));
-  };
-
-  // 更改成员角色
-  const handleRoleChange = (memberId: string, newRole: 'admin' | 'member') => {
-    setMembers(prev => 
-      prev.map(m => 
-        m.id === memberId ? { ...m, role: newRole } : m
-      )
-    );
-  };
-
-  // 通过工号或姓名添加成员
+  // 添加成员（通过工号或姓名）
   const handleAddByEmployeeId = async (searchValue: string) => {
     if (!searchValue.trim()) return;
     
@@ -180,6 +122,20 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
     }
   };
 
+  // 移除成员
+  const handleRemoveMember = (memberId: string) => {
+    setMembers(prev => prev.filter(m => m.id !== memberId));
+  };
+
+  // 更改成员角色
+  const handleRoleChange = (memberId: string, newRole: 'admin' | 'member') => {
+    setMembers(prev => 
+      prev.map(m => 
+        m.id === memberId ? { ...m, role: newRole } : m
+      )
+    );
+  };
+
   // 提交表单
   const handleSubmit = async (values: any) => {
     setLoading(true);
@@ -200,20 +156,6 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // 群组名称验证
-  const validateGroupName = (_: any, value: string) => {
-    if (!value) {
-      return Promise.reject(new Error('请输入群组名称'));
-    }
-    if (/[^a-zA-Z0-9\u4e00-\u9fa5_-]/.test(value)) {
-      return Promise.reject(new Error('群组名称不能包含特殊字符，只允许中英文、数字、下划线和短横线'));
-    }
-    if (value.length < 2 || value.length > 50) {
-      return Promise.reject(new Error('群组名称长度应在2-50个字符之间'));
-    }
-    return Promise.resolve();
   };
 
   // 成员表格列定义
@@ -351,11 +293,7 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
               <Form.Item
                 name="description"
                 label="群组描述"
-                rules={[
-                  { required: true, message: '请输入群组描述' },
-                  { min: 10, message: '描述至少需要10个字符' },
-                  { max: 500, message: '描述不能超过500个字符' }
-                ]}
+                rules={[{ validator: validateDescription }]}
               >
                 <TextArea
                   placeholder="请描述群组的用途、目标或工作范围..."

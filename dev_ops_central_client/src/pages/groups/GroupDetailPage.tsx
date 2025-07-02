@@ -4,14 +4,14 @@ import {
   Table,
   Tabs,
   Space,
-  Avatar,
-  Tag,
   Button,
-  message,
   Descriptions,
   Statistic,
   Row,
-  Col
+  Col,
+  Tag,
+  message,
+  Avatar
 } from 'antd';
 import {
   TeamOutlined,
@@ -20,21 +20,20 @@ import {
   CrownOutlined,
   SettingOutlined,
   UserAddOutlined,
-  ApiOutlined,
   ArrowLeftOutlined
 } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Group, GroupMember, Project, User } from '../../types';
-import type { ColumnsType } from 'antd/es/table';
+import { User, Group, GroupMember, Project } from '../../types';
 import {
-  PageHeader,
   UserDisplay,
   StatusTag,
   LoadingState,
   TableActions,
-  createViewAction
+  createViewAction,
+  PermissionChecker
 } from '../../components/common';
 import { usePageContext } from '../../components/common/PageContext';
+import type { ColumnsType } from 'antd/es/table';
 
 interface GroupDetailPageProps {
   user: User;
@@ -43,16 +42,12 @@ interface GroupDetailPageProps {
 const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
+  const { setGroupName } = usePageContext();
+  const [loading, setLoading] = useState(true);
   const [group, setGroup] = useState<Group | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { setGroupName } = usePageContext();
 
-  useEffect(() => {
-    if (groupId) {
-      fetchGroupData();
-    }
-  }, [groupId]);
+  const permissions = new PermissionChecker(user);
 
   // 组件卸载时清理上下文
   useEffect(() => {
@@ -61,125 +56,141 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
     };
   }, [setGroupName]);
 
-  const fetchGroupData = async () => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 模拟群组数据
-      const mockGroup: Group = {
-        id: groupId!,
-        name: '前端开发组',
-        description: '负责前端项目开发和维护，使用React、Vue等现代前端技术栈',
-        ownerId: user.username === 'groupuser' ? user.id : '1',
-        owner: {
-          id: user.username === 'groupuser' ? user.id : '1',
-          username: user.username === 'groupuser' ? user.username : 'group_owner',
-          email: 'owner@company.com',
-          role: 'user',
+  // 模拟数据获取
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // 模拟群组数据
+        const mockGroup: Group = {
+          id: groupId!,
+          name: '前端开发组',
+          description: '负责前端项目开发和维护，使用React、Vue等现代前端技术栈',
+          ownerId: user.username === 'groupuser' ? user.id : '1',
+          owner: {
+            id: user.username === 'groupuser' ? user.id : '1',
+            username: user.username === 'groupuser' ? user.username : 'group_owner',
+            email: 'owner@company.com',
+            role: 'user',
+            createdAt: '2024-01-01',
+            updatedAt: '2024-01-01'
+          },
+          members: [
+            {
+              id: '1',
+              userId: user.username === 'groupuser' ? user.id : '1',
+              groupId: groupId!,
+              user: {
+                id: user.username === 'groupuser' ? user.id : '1',
+                username: user.username === 'groupuser' ? user.username : 'group_owner',
+                email: 'owner@company.com',
+                role: 'user',
+                createdAt: '2024-01-01',
+                updatedAt: '2024-01-01'
+              },
+              role: 'admin',
+              permissions: {
+                canApproveMembers: true,
+                canEditProject: true,
+                canManageMembers: true
+              },
+              joinedAt: '2024-01-01'
+            },
+            {
+              id: '2',
+              userId: '2',
+              groupId: groupId!,
+              user: {
+                id: '2',
+                username: 'alice',
+                email: 'alice@company.com',
+                role: 'user',
+                createdAt: '2024-01-02',
+                updatedAt: '2024-01-02'
+              },
+              role: 'member',
+              permissions: {
+                canApproveMembers: false,
+                canEditProject: false,
+                canManageMembers: false
+              },
+              joinedAt: '2024-01-02'
+            }
+          ],
+          projectCount: 2,
           createdAt: '2024-01-01',
           updatedAt: '2024-01-01'
-        },
-        members: [
+        };
+
+        // 模拟项目数据
+        const mockProjects: Project[] = [
           {
             id: '1',
-            userId: user.username === 'groupuser' ? user.id : '1',
+            name: '用户管理系统',
+            description: '企业级用户管理系统前端',
             groupId: groupId!,
-            user: {
-              id: user.username === 'groupuser' ? user.id : '1',
-              username: user.username === 'groupuser' ? user.username : 'group_owner',
-              email: 'owner@company.com',
-              role: 'user',
-              createdAt: '2024-01-01',
-              updatedAt: '2024-01-01'
-            },
-            role: 'admin',
-            permissions: {
-              canApproveMembers: true,
-              canEditProject: true,
-              canManageMembers: true
-            },
-            joinedAt: '2024-01-01'
+            group: mockGroup,
+            isPublic: true,
+            apiCount: 15,
+            tags: ['React', '用户管理'],
+            version: 'v1.0.0',
+            status: 'active',
+            createdAt: '2024-01-15',
+            updatedAt: '2024-01-20'
           },
           {
             id: '2',
-            userId: '2',
+            name: '数据可视化平台',
+            description: '实时数据展示和分析平台',
             groupId: groupId!,
-            user: {
-              id: '2',
-              username: 'alice',
-              email: 'alice@company.com',
-              role: 'user',
-              createdAt: '2024-01-02',
-              updatedAt: '2024-01-02'
-            },
-            role: 'member',
-            permissions: {
-              canApproveMembers: false,
-              canEditProject: false,
-              canManageMembers: false
-            },
-            joinedAt: '2024-01-02'
+            group: mockGroup,
+            isPublic: false,
+            apiCount: 28,
+            tags: ['Vue', '数据可视化'],
+            version: 'v2.1.0',
+            status: 'active',
+            createdAt: '2024-02-01',
+            updatedAt: '2024-02-15'
           }
-        ],
-        projectCount: 2,
-        createdAt: '2024-01-01',
-        updatedAt: '2024-01-01'
-      };
+        ];
 
-      // 模拟项目数据
-      const mockProjects: Project[] = [
-        {
-          id: '1',
-          name: '用户管理系统',
-          description: '企业级用户管理系统前端',
-          groupId: groupId!,
-          group: mockGroup,
-          isPublic: true,
-          apiCount: 15,
-          tags: ['React', '用户管理'],
-          version: 'v1.0.0',
-          status: 'active',
-          createdAt: '2024-01-15',
-          updatedAt: '2024-01-20'
-        },
-        {
-          id: '2',
-          name: '数据可视化平台',
-          description: '实时数据展示和分析平台',
-          groupId: groupId!,
-          group: mockGroup,
-          isPublic: false,
-          apiCount: 28,
-          tags: ['Vue', '数据可视化'],
-          version: 'v2.1.0',
-          status: 'active',
-          createdAt: '2024-02-01',
-          updatedAt: '2024-02-15'
-        }
-      ];
+        setGroup(mockGroup);
+        setProjects(mockProjects);
+        setGroupName(mockGroup.name);
+      } catch (error) {
+        message.error('获取群组详情失败');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setGroup(mockGroup);
-      setProjects(mockProjects);
-      // 设置群组名称到页面上下文中，用于面包屑导航
-      setGroupName(mockGroup.name);
-    } catch (error) {
-      message.error('获取群组详情失败');
-    } finally {
-      setLoading(false);
+    if (groupId) {
+      fetchData();
     }
-  };
+  }, [groupId, user, setGroupName]);
 
   if (!group) {
     return <LoadingState loading={loading} />;
   }
 
-  const isOwner = group.ownerId === user.id;
-  const memberInfo = group.members.find(member => member.userId === user.id);
-  const isMember = !!memberInfo;
-  const isGroupAdmin = memberInfo?.role === 'admin';
-  const isSystemAdmin = user.role === 'system_admin';
+  // 日期格式化工具
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}年${month}月${day}日`;
+  };
 
+  // 权限检查
+  const isOwner = permissions.isGroupOwner(group);
+  const isMember = permissions.isGroupMember(group);
+  const isGroupAdmin = permissions.isGroupAdmin(group);
+  const isSystemAdmin = permissions.isSystemAdmin();
+
+  // 群组成员表格列配置
   const memberColumns: ColumnsType<GroupMember> = [
     {
       title: '成员信息',
@@ -215,7 +226,7 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
       title: '权限',
       key: 'permissions',
       render: (_, record) => (
-        <Space direction="vertical" size="small">
+        <Space direction="vertical" size={2} style={{ width: 'fit-content' }}>
           {record.permissions.canManageMembers && <Tag size="small">管理成员</Tag>}
           {record.permissions.canEditProject && <Tag size="small">编辑专案</Tag>}
           {record.permissions.canApproveMembers && <Tag size="small">审批申请</Tag>}
@@ -229,7 +240,7 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
       title: '专案名称',
       dataIndex: 'name',
       key: 'name',
-      render: (text, record) => (
+      render: (text: string, record: Project) => (
         <div>
           <div 
             style={{
@@ -251,7 +262,7 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
       title: '接口数量',
       dataIndex: 'apiCount',
       key: 'apiCount',
-      render: (count) => (
+      render: (count: number) => (
         <span style={{ fontWeight: 500 }}>{count} 个</span>
       ),
     },
@@ -259,20 +270,20 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => <StatusTag status={status} />,
+      render: (status: string) => <StatusTag status={status} />,
     },
     {
       title: '可见性',
       dataIndex: 'isPublic',
       key: 'isPublic',
-      render: (isPublic) => (
+      render: (isPublic: boolean) => (
         <StatusTag status={isPublic ? 'public' : 'private'} />
       ),
     },
     {
       title: '操作',
       key: 'actions',
-      render: (_, record) => {
+      render: (_: any, record: Project) => {
         const actions = [
           createViewAction(() => navigate(`/projects/${record.id}`))
         ];
@@ -298,13 +309,7 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
                 <Descriptions.Item label="群组名称">{group.name}</Descriptions.Item>
                 <Descriptions.Item label="群组描述">{group.description}</Descriptions.Item>
                 <Descriptions.Item label="创建时间">
-                  {(() => {
-                    const date = new Date(group.createdAt);
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    return `${year}年${month}月${day}日`;
-                  })()}
+                  {formatDate(group.createdAt)}
                 </Descriptions.Item>
                 <Descriptions.Item label="群主">
                   <UserDisplay
@@ -390,7 +395,7 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
   // 创建操作按钮数组
   const actionButtons = [];
   
-  if (isOwner || isGroupAdmin || isSystemAdmin) {
+  if (permissions.canEditGroup(group)) {
     actionButtons.push(
       <Button
         key="settings"
@@ -402,7 +407,7 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
     );
   }
 
-  if (isOwner || isSystemAdmin) {
+  if (permissions.canManageMembers(group)) {
     actionButtons.push(
       <Button
         key="invite"

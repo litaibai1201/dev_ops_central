@@ -29,3 +29,10 @@ export { default as ModalForm, groupFormFields, projectFormFields } from './Moda
 
 // 权限相关组件
 export { default as PermissionGuard } from './PermissionGuard';
+
+// 新增的公共工具和Hook
+export * from './DataService';
+export * from './PermissionUtils';
+export * from './CommonHooks';
+export * from './TableConfigs';
+export * from './UIComponents';

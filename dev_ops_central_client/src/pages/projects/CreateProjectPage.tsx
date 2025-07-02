@@ -8,15 +8,14 @@ import {
   Space,
   message,
   Tag,
-  AutoComplete,
   Row,
   Col,
   Switch,
-  Divider,
   Alert,
   List,
   Avatar,
-  Popconfirm
+  Popconfirm,
+  Divider
 } from 'antd';
 import {
   FolderAddOutlined,
@@ -24,12 +23,18 @@ import {
   CheckCircleOutlined,
   UserOutlined,
   CrownOutlined,
-  DeleteOutlined,
-  PlusOutlined
+  DeleteOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { User, Group, ProjectForm } from '../../types';
-import { PageHeader } from '../../components/common';
+import { 
+  PageHeader,
+  UserSearch,
+  FormValidators,
+  useOperations,
+  usePermissions,
+  CreateHelpCard
+} from '../../components/common';
 import { groupService } from '../../services/group';
 
 const { TextArea } = Input;
@@ -49,14 +54,13 @@ interface CreateProjectPageProps {
 
 const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   const [ownedGroups, setOwnedGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [groupMembers, setGroupMembers] = useState<User[]>([]);
   const [projectManagers, setProjectManagers] = useState<ProjectManager[]>([]);
-  const [searchUsers, setSearchUsers] = useState<User[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
   const navigate = useNavigate();
+  const { loading, executeOperation } = useOperations();
+  const permissions = usePermissions(user);
 
   // 获取用户拥有的群组
   useEffect(() => {
@@ -82,25 +86,21 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
 
   const fetchOwnedGroups = async () => {
     try {
-      // 获取用户作为群主的群组
       const response = await groupService.getUserGroups(user.id);
       if (response.success) {
         const owned = response.data.filter(group => group.ownerId === user.id);
         setOwnedGroups(owned);
         
         if (owned.length === 1) {
-          // 如果只有一个群组，自动选择
           setSelectedGroup(owned[0]);
           form.setFieldsValue({ groupId: owned[0].id });
           fetchGroupMembers(owned[0].id);
         }
       }
     } catch (error) {
-      console.error('获取群组失败:', error);
       // 使用模拟数据
       const mockGroups: Group[] = [];
       
-      // 为groupuser添加测试群组
       if (user.username === 'groupuser') {
         mockGroups.push({
           id: '10',
@@ -114,7 +114,6 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
           updatedAt: '2024-01-01'
         });
       } else {
-        // 其他用户的模拟数据
         mockGroups.push(
           {
             id: '1',
@@ -160,7 +159,6 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
         setGroupMembers(members);
       }
     } catch (error) {
-      console.error('获取群组成员失败:', error);
       // 使用模拟数据
       const mockMembers: User[] = [
         {
@@ -178,14 +176,6 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
           role: 'user',
           createdAt: '2024-01-01',
           updatedAt: '2024-01-01'
-        },
-        {
-          id: '4',
-          username: 'charlie',
-          email: 'charlie@example.com',
-          role: 'user',
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
         }
       ];
       setGroupMembers(mockMembers);
@@ -197,55 +187,7 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
     const group = ownedGroups.find(g => g.id === groupId);
     setSelectedGroup(group || null);
     fetchGroupMembers(groupId);
-    
-    // 重置项目负责人列表
     setProjectManagers([]);
-  };
-
-  // 搜索用户（通过工号）
-  const handleUserSearch = async (value: string) => {
-    if (!value) {
-      setSearchUsers([]);
-      return;
-    }
-
-    setSearchLoading(true);
-    try {
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const mockUsers: User[] = [
-        {
-          id: '5',
-          username: 'david',
-          email: 'david@example.com',
-          role: 'user',
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        },
-        {
-          id: '6',
-          username: 'eve',
-          email: 'eve@example.com',
-          role: 'user',
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        }
-      ];
-      
-      // 过滤已添加的负责人和搜索关键词
-      const existingUserIds = projectManagers.map(m => m.user.id);
-      const filteredUsers = mockUsers.filter(u => 
-        !existingUserIds.includes(u.id) &&
-        u.username.toLowerCase().includes(value.toLowerCase())
-      );
-      
-      setSearchUsers(filteredUsers);
-    } catch (error) {
-      console.error('搜索用户失败:', error);
-    } finally {
-      setSearchLoading(false);
-    }
   };
 
   // 添加项目负责人（从群组成员）
@@ -257,29 +199,28 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
       id: Date.now().toString(),
       user: selectedUser,
       isGroupMember: true,
-      memberRole: selectedUser.id === user.id ? 'owner' : 'member', // 简化角色判断
+      memberRole: selectedUser.id === user.id ? 'owner' : 'member',
       employeeId: selectedUser.username
     };
     
     setProjectManagers(prev => [...prev, newManager]);
   };
 
-  // 添加项目负责人（通过工号搜索）
-  const handleAddManagerBySearch = (selectedUser: User) => {
+  // 通过工号添加负责人
+  const handleAddByEmployeeId = (addedUser: User) => {
     const newManager: ProjectManager = {
       id: Date.now().toString(),
-      user: selectedUser,
+      user: addedUser,
       isGroupMember: false,
-      employeeId: selectedUser.username
+      employeeId: addedUser.username
     };
     
     setProjectManagers(prev => [...prev, newManager]);
-    setSearchUsers([]);
+    message.success(`已添加负责人 ${addedUser.username}`);
   };
 
   // 移除项目负责人
   const handleRemoveManager = (managerId: string) => {
-    // 不能移除群主
     const manager = projectManagers.find(m => m.id === managerId);
     if (manager?.memberRole === 'owner') {
       message.warning('不能移除群主作为项目负责人');
@@ -287,28 +228,6 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
     }
     
     setProjectManagers(prev => prev.filter(m => m.id !== managerId));
-  };
-
-  // 通过工号添加负责人
-  const handleAddByEmployeeId = async (employeeId: string) => {
-    if (!employeeId.trim()) return;
-    
-    try {
-      // 模拟通过工号查找用户
-      const mockUser: User = {
-        id: Date.now().toString(),
-        username: employeeId,
-        email: `${employeeId}@company.com`,
-        role: 'user',
-        createdAt: '2024-01-01',
-        updatedAt: '2024-01-01'
-      };
-      
-      handleAddManagerBySearch(mockUser);
-      message.success(`已添加负责人 ${employeeId}`);
-    } catch (error) {
-      message.error('未找到该工号对应的用户');
-    }
   };
 
   // 提交表单
@@ -323,39 +242,26 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
       return;
     }
 
-    setLoading(true);
-    try {
-      const projectData: ProjectForm & { managers: ProjectManager[] } = {
-        name: values.projectName,
-        description: values.description,
-        groupId: selectedGroup.id,
-        isPublic: values.isPublic || false,
-        tags: values.tags || [],
-        version: values.version || 'v1.0.0',
-        managers: projectManagers
-      };
-      
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      message.success('专案创建成功！');
-      navigate('/dashboard');
-    } catch (error) {
-      message.error('创建专案失败，请重试');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 项目名称验证
-  const validateProjectName = (_: any, value: string) => {
-    if (!value) {
-      return Promise.reject(new Error('请输入专案名称'));
-    }
-    if (value.length < 2 || value.length > 100) {
-      return Promise.reject(new Error('专案名称长度应在2-100个字符之间'));
-    }
-    return Promise.resolve();
+    await executeOperation(
+      async () => {
+        const projectData: ProjectForm & { managers: ProjectManager[] } = {
+          name: values.projectName,
+          description: values.description,
+          groupId: selectedGroup.id,
+          isPublic: values.isPublic || false,
+          tags: values.tags || [],
+          version: values.version || 'v1.0.0',
+          managers: projectManagers
+        };
+        
+        // 模拟API调用
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        navigate('/dashboard');
+      },
+      '专案创建成功！',
+      '创建专案失败，请重试'
+    );
   };
 
   // 获取可选的群组成员（排除已添加的）
@@ -453,7 +359,7 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
                 <Form.Item
                   name="projectName"
                   label="专案名称"
-                  rules={[{ validator: validateProjectName }]}
+                  rules={[{ validator: FormValidators.validateName(2, 100, true) }]}
                 >
                   <Input
                     placeholder="请输入专案名称"
@@ -465,11 +371,7 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
                 <Form.Item
                   name="description"
                   label="专案描述"
-                  rules={[
-                    { required: true, message: '请输入专案描述' },
-                    { min: 10, message: '描述至少需要10个字符' },
-                    { max: 500, message: '描述不能超过500个字符' }
-                  ]}
+                  rules={[{ validator: FormValidators.validateDescription(10, 500) }]}
                 >
                   <TextArea
                     placeholder="请描述专案的功能、用途或API接口类型..."
@@ -485,6 +387,7 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
                       name="version"
                       label="版本号"
                       initialValue="v1.0.0"
+                      rules={[{ validator: FormValidators.validateVersion }]}
                     >
                       <Input placeholder="例如: v1.0.0" />
                     </Form.Item>
@@ -537,7 +440,6 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
                       >
                         {getAvailableGroupMembers()
                           .sort((a, b) => {
-                            // 按照群主、管理员、普通成员的顺序排列
                             const aRole = a.id === user.id ? 'owner' : 'member';
                             const bRole = b.id === user.id ? 'owner' : 'member';
                             const roleOrder = { owner: 0, admin: 1, member: 2 };
@@ -565,10 +467,9 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
                       <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
                         通过工号添加外部负责人
                       </label>
-                      <Input.Search
+                      <UserSearch
+                        onAddUser={handleAddByEmployeeId}
                         placeholder="输入员工工号"
-                        enterButton="添加"
-                        onSearch={handleAddByEmployeeId}
                       />
                     </div>
                   </Space>
@@ -672,31 +573,22 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
           )}
 
           {/* 帮助信息 */}
-          <Card title="创建说明" size="small">
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
-              <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
-                <strong>项目负责人说明：</strong>
-                <ul style={{ paddingLeft: '16px', margin: '8px 0' }}>
-                  <li>默认包含群主作为项目负责人</li>
-                  <li>可以添加群组内的其他成员</li>
-                  <li>可以通过工号添加外部成员</li>
-                  <li>负责人将拥有项目管理权限</li>
-                </ul>
-              </div>
-              
-              <Divider style={{ margin: '12px 0' }} />
-              
-              <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
-                <strong>权限说明：</strong>
-                <ul style={{ paddingLeft: '16px', margin: '8px 0' }}>
-                  <li><Tag color="gold">群主</Tag> 拥有最高管理权限</li>
-                  <li><Tag color="blue">管理员</Tag> 可以管理项目和成员</li>
-                  <li><Tag color="green">普通成员</Tag> 可以查看和编辑API</li>
-                  <li><Tag color="orange">外部成员</Tag> 仅有项目访问权限</li>
-                </ul>
-              </div>
-            </Space>
-          </Card>
+          <CreateHelpCard
+            title="创建说明"
+            helpTexts={[
+              "项目负责人说明：",
+              "• 默认包含群主作为项目负责人",
+              "• 可以添加群组内的其他成员",
+              "• 可以通过工号添加外部成员",
+              "• 负责人将拥有项目管理权限",
+              "",
+              "权限说明：",
+              "• 群主 拥有最高管理权限",
+              "• 管理员 可以管理项目和成员",
+              "• 普通成员 可以查看和编辑API",
+              "• 外部成员 仅有项目访问权限"
+            ]}
+          />
         </Col>
       </Row>
     </div>
