@@ -16,6 +16,7 @@ interface PageHeaderProps {
   title: string;
   subtitle?: string;
   showBack?: boolean;
+  showBackButton?: boolean; // 新增属性，与showBack相同
   onBack?: () => void;
   backText?: string;
   actions?: ActionButton[];
@@ -29,6 +30,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   title,
   subtitle,
   showBack = false,
+  showBackButton = false, // 新增属性
   onBack,
   backText = '返回',
   actions = [],
@@ -54,7 +56,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
           display: 'flex', 
           alignItems: 'center' 
         }}>
-          {showBack && (
+          {(showBack || showBackButton) && (
             <>
               <Button 
                 icon={<ArrowLeftOutlined />} 
