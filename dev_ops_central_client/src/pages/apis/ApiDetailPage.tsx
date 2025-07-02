@@ -377,6 +377,271 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
       ),
     },
     {
+      key: 'code',
+      label: (
+        <span>
+          <FileTextOutlined />
+          示例代码
+        </span>
+      ),
+      children: (
+        <div>
+          <Tabs
+            type="card"
+            items={[
+              {
+                key: 'python',
+                label: 'Python',
+                children: (
+                  <Card>
+                    <pre style={{ 
+                      backgroundColor: '#f5f5f5', 
+                      padding: '16px', 
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      overflow: 'auto'
+                    }}>
+{`import requests
+
+url = "${api.url}"
+headers = {
+${Object.entries(api.headers).map(([key, value]) => `    "${key}": "${value}"`).join(',\n')}
+}
+
+${api.body ? `data = ${api.body.content}
+
+` : ''}response = requests.${api.method.toLowerCase()}(url, headers=headers${api.body ? ', json=data' : ''})
+print(response.json())`}
+                    </pre>
+                  </Card>
+                ),
+              },
+              {
+                key: 'java',
+                label: 'Java',
+                children: (
+                  <Card>
+                    <pre style={{ 
+                      backgroundColor: '#f5f5f5', 
+                      padding: '16px', 
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      overflow: 'auto'
+                    }}>
+{`import java.net.http.*;
+import java.net.URI;
+
+public class ApiClient {
+    public static void main(String[] args) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+            .uri(URI.create("${api.url}"))
+            .method("${api.method}", ${api.body ? 'HttpRequest.BodyPublishers.ofString(' + JSON.stringify(api.body.content) + ')' : 'HttpRequest.BodyPublishers.noBody()'});
+        
+${Object.entries(api.headers).map(([key, value]) => `        requestBuilder.header("${key}", "${value}");`).join('\n')}
+        
+        HttpRequest request = requestBuilder.build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        
+        System.out.println(response.body());
+    }
+}`}
+                    </pre>
+                  </Card>
+                ),
+              },
+              {
+                key: 'c',
+                label: 'C',
+                children: (
+                  <Card>
+                    <pre style={{ 
+                      backgroundColor: '#f5f5f5', 
+                      padding: '16px', 
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      overflow: 'auto'
+                    }}>
+{`#include <stdio.h>
+#include <curl/curl.h>
+
+struct string {
+    char *ptr;
+    size_t len;
+};
+
+void init_string(struct string *s) {
+    s->len = 0;
+    s->ptr = malloc(s->len+1);
+    s->ptr[0] = '\\0';
+}
+
+size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s) {
+    size_t new_len = s->len + size*nmemb;
+    s->ptr = realloc(s->ptr, new_len+1);
+    memcpy(s->ptr+s->len, ptr, size*nmemb);
+    s->ptr[new_len] = '\\0';
+    s->len = new_len;
+    return size*nmemb;
+}
+
+int main() {
+    CURL *curl;
+    CURLcode res;
+    struct string s;
+    
+    init_string(&s);
+    
+    curl = curl_easy_init();
+    if(curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, "${api.url}");
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
+        
+        struct curl_slist *headers = NULL;
+${Object.entries(api.headers).map(([key, value]) => `        headers = curl_slist_append(headers, "${key}: ${value}");`).join('\n')}
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+        
+        printf("%s\\n", s.ptr);
+        free(s.ptr);
+    }
+    return 0;
+}`}
+                    </pre>
+                  </Card>
+                ),
+              },
+              {
+                key: 'csharp',
+                label: 'C#',
+                children: (
+                  <Card>
+                    <pre style={{ 
+                      backgroundColor: '#f5f5f5', 
+                      padding: '16px', 
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      overflow: 'auto'
+                    }}>
+{`using System;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        using (HttpClient client = new HttpClient())
+        {
+${Object.entries(api.headers).map(([key, value]) => `            client.DefaultRequestHeaders.Add("${key}", "${value}");`).join('\n')}
+            
+            ${api.body ? `StringContent content = new StringContent(${JSON.stringify(api.body.content)}, Encoding.UTF8, "application/json");` : ''}
+            
+            HttpResponseMessage response = await client.${api.method === 'GET' ? 'GetAsync' : api.method === 'POST' ? 'PostAsync' : api.method === 'PUT' ? 'PutAsync' : 'DeleteAsync'}("${api.url}"${api.body ? ', content' : ''});
+            string responseBody = await response.Content.ReadAsStringAsync();
+            
+            Console.WriteLine(responseBody);
+        }
+    }
+}`}
+                    </pre>
+                  </Card>
+                ),
+              },
+              {
+                key: 'php',
+                label: 'PHP',
+                children: (
+                  <Card>
+                    <pre style={{ 
+                      backgroundColor: '#f5f5f5', 
+                      padding: '16px', 
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      overflow: 'auto'
+                    }}>
+{`<?php
+
+$url = "${api.url}";
+$headers = [
+${Object.entries(api.headers).map(([key, value]) => `    "${key}: ${value}"`).join(',\n')}
+];
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "${api.method}");
+
+${api.body ? `$data = ${api.body.content};
+curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+` : ''}
+$response = curl_exec($ch);
+curl_close($ch);
+
+echo $response;
+
+?>`}
+                    </pre>
+                  </Card>
+                ),
+              },
+              {
+                key: 'javascript',
+                label: 'JavaScript',
+                children: (
+                  <Card>
+                    <pre style={{ 
+                      backgroundColor: '#f5f5f5', 
+                      padding: '16px', 
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      overflow: 'auto'
+                    }}>
+{`fetch('${api.url}', {
+    method: '${api.method}',
+    headers: {
+${Object.entries(api.headers).map(([key, value]) => `        '${key}': '${value}'`).join(',\n')}
+    }${api.body ? `,\n    body: JSON.stringify(${api.body.content})` : ''}
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error('Error:', error));`}
+                    </pre>
+                  </Card>
+                ),
+              },
+              {
+                key: 'http',
+                label: 'HTTP',
+                children: (
+                  <Card>
+                    <pre style={{ 
+                      backgroundColor: '#f5f5f5', 
+                      padding: '16px', 
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      overflow: 'auto'
+                    }}>
+{`${api.method} ${api.url} HTTP/1.1
+${Object.entries(api.headers).map(([key, value]) => `${key}: ${value}`).join('\n')}
+
+${api.body ? api.body.content : ''}`}
+                    </pre>
+                  </Card>
+                ),
+              },
+            ]}
+          />
+        </div>
+      ),
+    },
+    {
       key: 'history',
       label: (
         <span>
@@ -424,7 +689,7 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
           size="large"
           style={{ flexShrink: 0 }}
         >
-          返回专案
+          返回
         </Button>
       </div>
 
@@ -466,9 +731,6 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
           </div>
           <div style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 8 }}>
             <Space size="small">
-              <Button icon={<PlayCircleOutlined />} size="middle">
-                测试接口
-              </Button>
               <Button type="primary" icon={<EditOutlined />} size="middle">
                 编辑接口
               </Button>
