@@ -442,34 +442,38 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
 
       {/* 标签页和操作按钮 */}
       <div style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        marginBottom: 24,
-        flexWrap: 'wrap',
-        gap: 16
+        borderBottom: '1px solid #f0f0f0',
+        marginBottom: 24
       }}>
-        <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-          <Tabs
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            items={tabItems.map(item => ({
-              ...item,
-              children: undefined // 移除children，稍后单独渲染
-            }))}
-            size="large"
-            tabBarStyle={{ marginBottom: 0 }}
-          />
-        </div>
-        <div style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 8 }}>
-          <Space size="small">
-            <Button icon={<PlayCircleOutlined />} size="middle">
-              测试接口
-            </Button>
-            <Button type="primary" icon={<EditOutlined />} size="middle">
-              编辑接口
-            </Button>
-          </Space>
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16
+        }}>
+          <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              items={tabItems.map(item => ({
+                ...item,
+                children: undefined // 移除children，稍后单独渲染
+              }))}
+              size="large"
+              tabBarStyle={{ marginBottom: 0, borderBottom: 'none' }}
+            />
+          </div>
+          <div style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 8 }}>
+            <Space size="small">
+              <Button icon={<PlayCircleOutlined />} size="middle">
+                测试接口
+              </Button>
+              <Button type="primary" icon={<EditOutlined />} size="middle">
+                编辑接口
+              </Button>
+            </Space>
+          </div>
         </div>
       </div>
 

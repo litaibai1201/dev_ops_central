@@ -342,7 +342,17 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
         <Row gutter={[24, 24]}>
           <Col xs={24} lg={16}>
             {/* 基本信息 */}
-            <Card title="基本信息" style={{ height: '100%' }}>
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: 600, 
+                color: '#262626', 
+                marginBottom: 16,
+                borderBottom: '1px solid #f0f0f0',
+                paddingBottom: 8
+              }}>
+                基本信息
+              </h3>
               <Descriptions column={2} bordered labelStyle={{ width: '120px' }}>
                 <Descriptions.Item label="专案名称">{project.name}</Descriptions.Item>
                 <Descriptions.Item label="版本">{project.version}</Descriptions.Item>
@@ -391,11 +401,21 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
                   {project.description}
                 </Descriptions.Item>
               </Descriptions>
-            </Card>
+            </div>
           </Col>
           <Col xs={24} lg={8}>
             {/* 快速统计 */}
-            <Card title="快速统计" size="small">
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: 600, 
+                color: '#262626', 
+                marginBottom: 16,
+                borderBottom: '1px solid #f0f0f0',
+                paddingBottom: 8
+              }}>
+                快速统计
+              </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ textAlign: 'center', padding: 12, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
                   <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff', marginBottom: 4 }}>{apis.length}</div>
@@ -420,7 +440,7 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
                   <div style={{ color: '#666', fontSize: 12 }}>已废弃</div>
                 </div>
               </div>
-            </Card>
+            </div>
           </Col>
         </Row>
       ),
@@ -435,12 +455,6 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
       ),
       children: (
         <Card>
-          <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>API接口列表</h3>
-            <Button type="primary" icon={<ApiOutlined />}>
-              添加接口
-            </Button>
-          </div>
           <Table
             columns={apiColumns}
             dataSource={apis}
@@ -501,22 +515,31 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
       {/* 页面标题 */}
       <div style={{ 
         display: 'flex', 
-        alignItems: 'center', 
+        alignItems: 'flex-end', 
         justifyContent: 'space-between',
         marginBottom: 16,
         flexWrap: 'wrap',
         gap: 16
       }}>
-        <h1 style={{
-          fontSize: '28px',
-          fontWeight: 'bold',
-          color: '#1f2937',
-          margin: 0,
-          minWidth: 0,
-          flex: '1 1 auto'
-        }}>
-          {project.name}
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+          <h1 style={{
+            fontSize: '28px',
+            fontWeight: 'bold',
+            color: '#1f2937',
+            margin: 0,
+            minWidth: 0,
+            flex: '1 1 auto'
+          }}>
+            {project.name}
+          </h1>
+          <Tooltip title="分享专案">
+            <Button 
+              icon={<ShareAltOutlined />} 
+              size="small" 
+              style={{ marginBottom: 2 }}
+            />
+          </Tooltip>
+        </div>
         <Button 
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate('/dashboard')}
@@ -541,35 +564,36 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
 
       {/* 标签页和操作按钮 */}
       <div style={{
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        marginBottom: 24,
-        flexWrap: 'wrap',
-        gap: 16
+        borderBottom: '1px solid #f0f0f0',
+        marginBottom: 24
       }}>
-        <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-          <Tabs
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            items={tabItems.map(item => ({
-              ...item,
-              children: undefined // 移除children，稍后单独渲染
-            }))}
-            size="large"
-            tabBarStyle={{ marginBottom: 0 }}
-          />
-        </div>
-        <div style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 8 }}>
-          <Space size="small">
-            <Tooltip title="分享专案">
-              <Button icon={<ShareAltOutlined />} size="middle" />
-            </Tooltip>
-            <Button icon={<EditOutlined />} size="middle">编辑</Button>
-            <Button type="primary" icon={<ApiOutlined />} size="middle">
-              添加接口
-            </Button>
-          </Space>
+        <div style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16
+        }}>
+          <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              items={tabItems.map(item => ({
+                ...item,
+                children: undefined // 移除children，稍后单独渲染
+              }))}
+              size="large"
+              tabBarStyle={{ marginBottom: 0, borderBottom: 'none' }}
+            />
+          </div>
+          <div style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 8 }}>
+            <Space size="small">
+              <Button icon={<EditOutlined />} size="middle">编辑</Button>
+              <Button type="primary" icon={<ApiOutlined />} size="middle">
+                添加接口
+              </Button>
+            </Space>
+          </div>
         </div>
       </div>
 
