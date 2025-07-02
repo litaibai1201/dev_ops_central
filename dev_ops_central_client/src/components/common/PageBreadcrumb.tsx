@@ -23,7 +23,7 @@ const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { apiName, groupName } = usePageContext();
+  const { apiName, groupName, projectName } = usePageContext();
 
   // 如果没有传入 items，根据当前路径自动生成
   const generateBreadcrumbItems = (): PageBreadcrumbItem[] => {
@@ -70,17 +70,21 @@ const PageBreadcrumb: React.FC<PageBreadcrumbProps> = ({
           )
         });
       } else if (pathSegments.length >= 2) {
+        // 专案详情页面，优先使用PageContext中的项目名称
+        const displayProjectName = projectName || '专案详情';
+        
         breadcrumbItems.push({
-          title: '专案详情',
+          title: displayProjectName,
           href: `/projects/${pathSegments[1]}`
         });
         
         if (pathSegments.length >= 4 && pathSegments[2] === 'apis') {
+          // API详情页面
           breadcrumbItems.push({
             title: (
               <span>
                 <ApiOutlined style={{ marginRight: '4px' }} />
-                {apiName || '接口详情'}
+                {apiName || 'API详情'}
               </span>
             )
           });

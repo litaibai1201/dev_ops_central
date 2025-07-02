@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Space, Typography, Descriptions, Tag, Table, Tabs, Divider, Tooltip, Badge, Empty } from 'antd';
+import { Card, Button, Space, Typography, Descriptions, Tag, Table, Tabs, Divider, Tooltip, Badge, Empty, Row, Col } from 'antd';
 import { 
   ArrowLeftOutlined, 
   ApiOutlined, 
@@ -16,7 +16,6 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Project, ApiMethod, ApiFolder } from '../../types';
 import { 
-  PageHeader,
   StatusTag,
   UserDisplay,
   LoadingState,
@@ -25,7 +24,8 @@ import {
   createEditAction,
   createDeleteAction,
   createTestAction,
-  HttpMethodTag
+  HttpMethodTag,
+  usePageContext
 } from '../../components/common';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -36,6 +36,7 @@ interface ProjectDetailPageProps {
 const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const { setProjectName } = usePageContext();
   const [loading, setLoading] = useState(true);
   const [project, setProject] = useState<Project | null>(null);
   const [apis, setApis] = useState<ApiMethod[]>([]);
@@ -220,6 +221,8 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
 
         setProject(mockProject);
         setApis(mockApis);
+        // 设置面包屑上下文
+        setProjectName(mockProject.name);
       } catch (error) {
         console.error('Failed to fetch project data:', error);
       } finally {
@@ -336,87 +339,90 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
         </span>
       ),
       children: (
-        <div>
-          {/* 基本信息 */}
-          <Card title="基本信息" style={{ marginBottom: 24 }}>
-            <Descriptions column={2} bordered>
-              <Descriptions.Item label="专案名称">{project.name}</Descriptions.Item>
-              <Descriptions.Item label="版本">{project.version}</Descriptions.Item>
-              <Descriptions.Item label="所属群组">
-                <UserDisplay 
-                  username={project.group.name}
-                  showEmail={false}
-                  avatarSize="small"
-                />
-              </Descriptions.Item>
-              <Descriptions.Item label="可见性">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {project.isPublic ? (
-                    <>
-                      <GlobalOutlined style={{ color: '#52c41a' }} />
-                      <span>公开</span>
-                    </>
-                  ) : (
-                    <>
-                      <LockOutlined style={{ color: '#faad14' }} />
-                      <span>私有</span>
-                    </>
-                  )}
+        <Row gutter={[24, 24]}>
+          <Col xs={24} lg={16}>
+            {/* 基本信息 */}
+            <Card title="基本信息" style={{ height: '100%' }}>
+              <Descriptions column={2} bordered labelStyle={{ width: '120px' }}>
+                <Descriptions.Item label="专案名称">{project.name}</Descriptions.Item>
+                <Descriptions.Item label="版本">{project.version}</Descriptions.Item>
+                <Descriptions.Item label="所属群组">
+                  <UserDisplay 
+                    username={project.group.name}
+                    showEmail={false}
+                    avatarSize="small"
+                  />
+                </Descriptions.Item>
+                <Descriptions.Item label="可见性">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {project.isPublic ? (
+                      <>
+                        <GlobalOutlined style={{ color: '#52c41a' }} />
+                        <span>公开</span>
+                      </>
+                    ) : (
+                      <>
+                        <LockOutlined style={{ color: '#faad14' }} />
+                        <span>私有</span>
+                      </>
+                    )}
+                  </div>
+                </Descriptions.Item>
+                <Descriptions.Item label="状态">
+                  <StatusTag status={project.status} />
+                </Descriptions.Item>
+                <Descriptions.Item label="接口数量">
+                  <Badge count={project.apiCount} showZero style={{ backgroundColor: '#1890ff' }} />
+                </Descriptions.Item>
+                <Descriptions.Item label="创建时间">
+                  {new Date(project.createdAt).toLocaleDateString()}
+                </Descriptions.Item>
+                <Descriptions.Item label="更新时间">
+                  {new Date(project.updatedAt).toLocaleDateString()}
+                </Descriptions.Item>
+                <Descriptions.Item label="标签" span={2}>
+                  <div>
+                    {project.tags.map(tag => (
+                      <Tag key={tag} color="blue">{tag}</Tag>
+                    ))}
+                  </div>
+                </Descriptions.Item>
+                <Descriptions.Item label="描述" span={2}>
+                  {project.description}
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+          </Col>
+          <Col xs={24} lg={8}>
+            {/* 快速统计 */}
+            <Card title="快速统计" size="small">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ textAlign: 'center', padding: 12, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
+                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff', marginBottom: 4 }}>{apis.length}</div>
+                  <div style={{ color: '#666', fontSize: 12 }}>总接口数</div>
                 </div>
-              </Descriptions.Item>
-              <Descriptions.Item label="状态">
-                <StatusTag status={project.status} />
-              </Descriptions.Item>
-              <Descriptions.Item label="接口数量">
-                <Badge count={project.apiCount} showZero style={{ backgroundColor: '#1890ff' }} />
-              </Descriptions.Item>
-              <Descriptions.Item label="创建时间">
-                {new Date(project.createdAt).toLocaleDateString()}
-              </Descriptions.Item>
-              <Descriptions.Item label="更新时间">
-                {new Date(project.updatedAt).toLocaleDateString()}
-              </Descriptions.Item>
-              <Descriptions.Item label="标签" span={2}>
-                <div>
-                  {project.tags.map(tag => (
-                    <Tag key={tag} color="blue">{tag}</Tag>
-                  ))}
+                <div style={{ textAlign: 'center', padding: 12, backgroundColor: '#f6ffed', borderRadius: 8 }}>
+                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a', marginBottom: 4 }}>
+                    {apis.filter(api => api.status === 'published').length}
+                  </div>
+                  <div style={{ color: '#666', fontSize: 12 }}>已发布</div>
                 </div>
-              </Descriptions.Item>
-              <Descriptions.Item label="描述" span={2}>
-                {project.description}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-
-          {/* 快速统计 */}
-          <Card title="快速统计">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-              <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
-                <div style={{ fontSize: 24, fontWeight: 'bold', color: '#1890ff' }}>{apis.length}</div>
-                <div style={{ color: '#666' }}>总接口数</div>
+                <div style={{ textAlign: 'center', padding: 12, backgroundColor: '#fffbe6', borderRadius: 8 }}>
+                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#faad14', marginBottom: 4 }}>
+                    {apis.filter(api => api.status === 'draft').length}
+                  </div>
+                  <div style={{ color: '#666', fontSize: 12 }}>草稿</div>
+                </div>
+                <div style={{ textAlign: 'center', padding: 12, backgroundColor: '#fff2f0', borderRadius: 8 }}>
+                  <div style={{ fontSize: 24, fontWeight: 'bold', color: '#ff4d4f', marginBottom: 4 }}>
+                    {apis.filter(api => api.status === 'deprecated').length}
+                  </div>
+                  <div style={{ color: '#666', fontSize: 12 }}>已废弃</div>
+                </div>
               </div>
-              <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
-                <div style={{ fontSize: 24, fontWeight: 'bold', color: '#52c41a' }}>
-                  {apis.filter(api => api.status === 'published').length}
-                </div>
-                <div style={{ color: '#666' }}>已发布</div>
-              </div>
-              <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
-                <div style={{ fontSize: 24, fontWeight: 'bold', color: '#faad14' }}>
-                  {apis.filter(api => api.status === 'draft').length}
-                </div>
-                <div style={{ color: '#666' }}>草稿</div>
-              </div>
-              <div style={{ textAlign: 'center', padding: 16, backgroundColor: '#f0f9ff', borderRadius: 8 }}>
-                <div style={{ fontSize: 24, fontWeight: 'bold', color: '#ff4d4f' }}>
-                  {apis.filter(api => api.status === 'deprecated').length}
-                </div>
-                <div style={{ color: '#666' }}>已废弃</div>
-              </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </Col>
+        </Row>
       ),
     },
     {
@@ -492,30 +498,85 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
 
   return (
     <div>
-      <PageHeader
-        title={project.name}
-        subtitle={project.description}
-        showBackButton
-        onBack={() => navigate('/dashboard')}
-        extra={
-          <Space>
+      {/* 页面标题 */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        flexWrap: 'wrap',
+        gap: 16
+      }}>
+        <h1 style={{
+          fontSize: '28px',
+          fontWeight: 'bold',
+          color: '#1f2937',
+          margin: 0,
+          minWidth: 0,
+          flex: '1 1 auto'
+        }}>
+          {project.name}
+        </h1>
+        <Button 
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate('/dashboard')}
+          size="large"
+          style={{ flexShrink: 0 }}
+        >
+          返回
+        </Button>
+      </div>
+
+      {/* 项目描述 */}
+      {project.description && (
+        <p style={{
+          color: '#6b7280',
+          fontSize: '16px',
+          marginBottom: 16,
+          lineHeight: 1.6
+        }}>
+          {project.description}
+        </p>
+      )}
+
+      {/* 标签页和操作按钮 */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        marginBottom: 24,
+        flexWrap: 'wrap',
+        gap: 16
+      }}>
+        <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            items={tabItems.map(item => ({
+              ...item,
+              children: undefined // 移除children，稍后单独渲染
+            }))}
+            size="large"
+            tabBarStyle={{ marginBottom: 0 }}
+          />
+        </div>
+        <div style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 8 }}>
+          <Space size="small">
             <Tooltip title="分享专案">
-              <Button icon={<ShareAltOutlined />} />
+              <Button icon={<ShareAltOutlined />} size="middle" />
             </Tooltip>
-            <Button icon={<EditOutlined />}>编辑</Button>
-            <Button type="primary" icon={<ApiOutlined />}>
+            <Button icon={<EditOutlined />} size="middle">编辑</Button>
+            <Button type="primary" icon={<ApiOutlined />} size="middle">
               添加接口
             </Button>
           </Space>
-        }
-      />
+        </div>
+      </div>
 
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={tabItems}
-        size="large"
-      />
+      {/* 标签页内容 */}
+      <div>
+        {tabItems.find(item => item.key === activeTab)?.children}
+      </div>
     </div>
   );
 };
