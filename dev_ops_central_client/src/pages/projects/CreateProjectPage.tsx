@@ -302,16 +302,19 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
               size="large"
             >
               {/* 基本信息 */}
-              <Card 
-                size="small" 
-                title={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FolderAddOutlined style={{ color: '#1890ff' }} />
-                    <span>基本信息</span>
-                  </div>
-                }
-                style={{ marginBottom: '24px' }}
-              >
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  marginBottom: '16px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px solid #f0f0f0'
+                }}>
+                  <FolderAddOutlined style={{ color: '#1890ff' }} />
+                  <span style={{ fontSize: '16px', fontWeight: 500 }}>基本信息</span>
+                </div>
+
                 <Form.Item
                   name="groupId"
                   label="所属群组"
@@ -406,7 +409,7 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
                     </Form.Item>
                   </Col>
                 </Row>
-              </Card>
+              </div>
 
               {/* 项目负责人 */}
               {selectedGroup && (
