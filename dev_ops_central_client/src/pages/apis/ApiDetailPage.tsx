@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Space, Tag, Descriptions, Typography, Tabs, Empty, Tooltip } from 'antd';
-import { ArrowLeftOutlined, PlayCircleOutlined, EditOutlined, FileTextOutlined, HistoryOutlined, BugOutlined } from '@ant-design/icons';
+import { Card, Button, Space, Tag, Descriptions, Typography, Tabs, Empty, Tooltip, message } from 'antd';
+import { ArrowLeftOutlined, PlayCircleOutlined, EditOutlined, FileTextOutlined, HistoryOutlined, BugOutlined, CopyOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { User, Project, ApiMethod } from '../../types';
 import { 
@@ -236,21 +236,40 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
       children: (
         <div>
           {/* 基本信息 */}
-          <Card title="基本信息" style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 24 }}>
+            <h3 style={{ 
+              fontSize: '16px', 
+              fontWeight: 600, 
+              color: '#262626', 
+              marginBottom: 16,
+              borderBottom: '1px solid #f0f0f0',
+              paddingBottom: 8
+            }}>
+              基本信息
+            </h3>
             <Descriptions column={2} bordered>
               <Descriptions.Item label="接口名称">{api.name}</Descriptions.Item>
               <Descriptions.Item label="请求方法">
                 <HttpMethodTag method={api.method} />
               </Descriptions.Item>
               <Descriptions.Item label="URL路径">
-                <code style={{ 
-                  backgroundColor: '#f5f5f5', 
-                  padding: '4px 8px', 
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}>
-                  {api.url}
-                </code>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ 
+                    fontSize: '14px',
+                    flex: 1
+                  }}>
+                    {api.url}
+                  </span>
+                  <Button 
+                    size="small" 
+                    icon={<CopyOutlined />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(api.url);
+                      message.success('复制成功');
+                    }}
+                    title="复制URL"
+                  />
+                </div>
               </Descriptions.Item>
               <Descriptions.Item label="状态">
                 <StatusTag status={api.status} />
@@ -266,11 +285,65 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
                 {api.description}
               </Descriptions.Item>
             </Descriptions>
-          </Card>
+          </div>
+
+          {/* 请求头 */}
+          {api.headers && Object.keys(api.headers).length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: 600, 
+                color: '#262626', 
+                marginBottom: 16,
+                borderBottom: '1px solid #f0f0f0',
+                paddingBottom: 8
+              }}>
+                请求头
+              </h3>
+              <div style={{ overflow: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#fafafa' }}>
+                      <th style={{ padding: '12px', border: '1px solid #f0f0f0', textAlign: 'left' }}>头部名称</th>
+                      <th style={{ padding: '12px', border: '1px solid #f0f0f0', textAlign: 'left' }}>值</th>
+                      <th style={{ padding: '12px', border: '1px solid #f0f0f0', textAlign: 'left' }}>描述</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(api.headers).map(([key, value]) => (
+                      <tr key={key}>
+                        <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
+                          {key}
+                        </td>
+                        <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
+                          {value}
+                        </td>
+                        <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
+                          {key === 'Content-Type' ? '请求内容类型' : 
+                           key === 'Authorization' ? '身份验证信息' : 
+                           '请求头参数'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* 请求参数 */}
           {api.params && api.params.length > 0 && (
-            <Card title="请求参数" style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: 600, 
+                color: '#262626', 
+                marginBottom: 16,
+                borderBottom: '1px solid #f0f0f0',
+                paddingBottom: 8
+              }}>
+                请求参数
+              </h3>
               <div style={{ overflow: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
@@ -286,10 +359,10 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
                     {api.params.map(param => (
                       <tr key={param.id}>
                         <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
-                          <code>{param.name}</code>
+                          {param.name}
                         </td>
                         <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
-                          <Tag color="purple">{param.type}</Tag>
+                          {param.type}
                         </td>
                         <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
                           {param.required ? (
@@ -299,7 +372,7 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
                           )}
                         </td>
                         <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
-                          <code>{param.example}</code>
+                          {param.example}
                         </td>
                         <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
                           {param.description}
@@ -309,14 +382,91 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
                   </tbody>
                 </table>
               </div>
-            </Card>
+            </div>
           )}
+
+          {/* 响应参数 */}
+          <div style={{ marginBottom: 24 }}>
+            <h3 style={{ 
+              fontSize: '16px', 
+              fontWeight: 600, 
+              color: '#262626', 
+              marginBottom: 16,
+              borderBottom: '1px solid #f0f0f0',
+              paddingBottom: 8
+            }}>
+              响应参数
+            </h3>
+            <div style={{ overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#fafafa' }}>
+                    <th style={{ padding: '12px', border: '1px solid #f0f0f0', textAlign: 'left' }}>字段名</th>
+                    <th style={{ padding: '12px', border: '1px solid #f0f0f0', textAlign: 'left' }}>类型</th>
+                    <th style={{ padding: '12px', border: '1px solid #f0f0f0', textAlign: 'left' }}>描述</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
+                      success
+                    </td>
+                    <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
+                      boolean
+                    </td>
+                    <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>请求是否成功</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
+                      message
+                    </td>
+                    <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
+                      string
+                    </td>
+                    <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>响应消息</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
+                      data
+                    </td>
+                    <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>
+                      object
+                    </td>
+                    <td style={{ padding: '12px', border: '1px solid #f0f0f0' }}>返回数据</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
 
           {/* 请求体 */}
           {api.body && (
-            <Card title="请求体" style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: 600, 
+                color: '#262626', 
+                marginBottom: 16,
+                borderBottom: '1px solid #f0f0f0',
+                paddingBottom: 8
+              }}>
+                请求体
+              </h3>
               <div>
-                <Tag color="blue" style={{ marginBottom: 16 }}>{api.body.type}</Tag>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <Tag color="blue">{api.body.type}</Tag>
+                  <Button 
+                    size="small" 
+                    icon={<CopyOutlined />}
+                    onClick={() => {
+                      navigator.clipboard.writeText(api.body?.content || '');
+                      message.success('复制成功');
+                    }}
+                    title="复制请求体"
+                  >
+                    复制
+                  </Button>
+                </div>
                 <pre style={{ 
                   backgroundColor: '#f5f5f5', 
                   padding: '16px', 
@@ -327,19 +477,42 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
                   {api.body.content}
                 </pre>
               </div>
-            </Card>
+            </div>
           )}
 
           {/* 响应示例 */}
           {api.responses && api.responses.length > 0 && (
-            <Card title="响应示例">
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ 
+                fontSize: '16px', 
+                fontWeight: 600, 
+                color: '#262626', 
+                marginBottom: 16,
+                borderBottom: '1px solid #f0f0f0',
+                paddingBottom: 8
+              }}>
+                响应示例
+              </h3>
               {api.responses.map(response => (
                 <div key={response.id} style={{ marginBottom: 24 }}>
-                  <div style={{ marginBottom: 12 }}>
-                    <Tag color={response.statusCode < 300 ? 'green' : 'red'} style={{ marginRight: 8 }}>
-                      {response.statusCode}
-                    </Tag>
-                    <span>{response.description}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div>
+                      <Tag color={response.statusCode < 300 ? 'green' : 'red'} style={{ marginRight: 8 }}>
+                        {response.statusCode}
+                      </Tag>
+                      <span>{response.description}</span>
+                    </div>
+                    <Button 
+                      size="small" 
+                      icon={<CopyOutlined />}
+                      onClick={() => {
+                        navigator.clipboard.writeText(response.example);
+                        message.success('复制成功');
+                      }}
+                      title="复制响应示例"
+                    >
+                      复制
+                    </Button>
                   </div>
                   <pre style={{ 
                     backgroundColor: '#f5f5f5', 
@@ -352,7 +525,7 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
                   </pre>
                 </div>
               ))}
-            </Card>
+            </div>
           )}
         </div>
       ),
@@ -393,7 +566,30 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
                 key: 'python',
                 label: 'Python',
                 children: (
-                  <Card>
+                  <div style={{ position: 'relative' }}>
+                    <Button 
+                      size="small" 
+                      icon={<CopyOutlined />}
+                      onClick={() => {
+                        const pythonCode = `import requests
+
+url = "${api.url}"
+headers = {
+${Object.entries(api.headers).map(([key, value]) => `    "${key}": "${value}"`).join(',\n')}
+}
+
+${api.body ? `data = ${api.body.content}
+
+` : ''}response = requests.${api.method.toLowerCase()}(url, headers=headers${api.body ? ', json=data' : ''})
+print(response.json())`;
+                        navigator.clipboard.writeText(pythonCode);
+                        message.success('复制成功');
+                      }}
+                      title="复制Python代码"
+                      style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+                    >
+                      复制
+                    </Button>
                     <pre style={{ 
                       backgroundColor: '#f5f5f5', 
                       padding: '16px', 
@@ -413,14 +609,41 @@ ${api.body ? `data = ${api.body.content}
 ` : ''}response = requests.${api.method.toLowerCase()}(url, headers=headers${api.body ? ', json=data' : ''})
 print(response.json())`}
                     </pre>
-                  </Card>
+                  </div>
                 ),
               },
               {
                 key: 'java',
                 label: 'Java',
                 children: (
-                  <Card>
+                  <div style={{ position: 'relative' }}>
+                    <Button 
+                      size="small" 
+                      icon={<span style={{ fontSize: '12px' }}>📋</span>}
+                      onClick={() => navigator.clipboard.writeText(`import java.net.http.*;
+import java.net.URI;
+
+public class ApiClient {
+    public static void main(String[] args) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+        
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+            .uri(URI.create("${api.url}"))
+            .method("${api.method}", ${api.body ? 'HttpRequest.BodyPublishers.ofString(' + JSON.stringify(api.body.content) + ')' : 'HttpRequest.BodyPublishers.noBody()'});
+        
+${Object.entries(api.headers).map(([key, value]) => `        requestBuilder.header("${key}", "${value}");`).join('\n')}
+        
+        HttpRequest request = requestBuilder.build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        
+        System.out.println(response.body());
+    }
+}`)}
+                      title="复制Java代码"
+                      style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+                    >
+                      复制
+                    </Button>
                     <pre style={{ 
                       backgroundColor: '#f5f5f5', 
                       padding: '16px', 
@@ -448,14 +671,73 @@ ${Object.entries(api.headers).map(([key, value]) => `        requestBuilder.head
     }
 }`}
                     </pre>
-                  </Card>
+                  </div>
                 ),
               },
               {
                 key: 'c',
                 label: 'C',
                 children: (
-                  <Card>
+                  <div style={{ position: 'relative' }}>
+                    <Button 
+                      size="small" 
+                      icon={<span style={{ fontSize: '12px' }}>📋</span>}
+                      onClick={() => {
+                        const cCode = `#include <stdio.h>
+#include <curl/curl.h>
+
+struct string {
+    char *ptr;
+    size_t len;
+};
+
+void init_string(struct string *s) {
+    s->len = 0;
+    s->ptr = malloc(s->len+1);
+    s->ptr[0] = '\\0';
+}
+
+size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s) {
+    size_t new_len = s->len + size*nmemb;
+    s->ptr = realloc(s->ptr, new_len+1);
+    memcpy(s->ptr+s->len, ptr, size*nmemb);
+    s->ptr[new_len] = '\\0';
+    s->len = new_len;
+    return size*nmemb;
+}
+
+int main() {
+    CURL *curl;
+    CURLcode res;
+    struct string s;
+    
+    init_string(&s);
+    
+    curl = curl_easy_init();
+    if(curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, "${api.url}");
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writefunc);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &s);
+        
+        struct curl_slist *headers = NULL;
+${Object.entries(api.headers).map(([key, value]) => `        headers = curl_slist_append(headers, "${key}: ${value}");`).join('\n')}
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+        
+        printf("%s\\n", s.ptr);
+        free(s.ptr);
+    }
+    return 0;
+}`;
+                        navigator.clipboard.writeText(cCode);
+                      }}
+                      title="复制C代码"
+                      style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+                    >
+                      复制
+                    </Button>
                     <pre style={{ 
                       backgroundColor: '#f5f5f5', 
                       padding: '16px', 
@@ -512,21 +794,45 @@ ${Object.entries(api.headers).map(([key, value]) => `        headers = curl_slis
     return 0;
 }`}
                     </pre>
-                  </Card>
+                  </div>
                 ),
               },
               {
                 key: 'csharp',
                 label: 'C#',
                 children: (
-                  <Card>
-                    <pre style={{ 
-                      backgroundColor: '#f5f5f5', 
-                      padding: '16px', 
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      overflow: 'auto'
-                    }}>
+                  <div style={{ position: 'relative' }}>
+                    <Button 
+                      size="small" 
+                      icon={<span style={{ fontSize: '12px' }}>📋</span>}
+                      onClick={() => navigator.clipboard.writeText(`using System;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        using (HttpClient client = new HttpClient())
+        {
+${Object.entries(api.headers).map(([key, value]) => `            client.DefaultRequestHeaders.Add("${key}", "${value}");`).join('\n')}
+            
+            ${api.body ? `StringContent content = new StringContent(${JSON.stringify(api.body.content)}, Encoding.UTF8, "application/json");` : ''}
+            
+            HttpResponseMessage response = await client.${api.method === 'GET' ? 'GetAsync' : api.method === 'POST' ? 'PostAsync' : api.method === 'PUT' ? 'PutAsync' : 'DeleteAsync'}("${api.url}"${api.body ? ', content' : ''});
+            string responseBody = await response.Content.ReadAsStringAsync();
+            
+            Console.WriteLine(responseBody);
+        }
+    }
+}`)}
+                      title="复制C#代码"
+                      style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}
+                    >
+                      复制
+                    </Button>
+                    <pre style={{ backgroundColor: '#f5f5f5', padding: '16px', borderRadius: '8px', fontSize: '14px', overflow: 'auto' }}>
 {`using System;
 using System.Net.Http;
 using System.Text;
@@ -550,7 +856,7 @@ ${Object.entries(api.headers).map(([key, value]) => `            client.DefaultR
     }
 }`}
                     </pre>
-                  </Card>
+                  </div>
                 ),
               },
               {
