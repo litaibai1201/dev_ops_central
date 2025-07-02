@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Button, Input, Tag, Select, Switch, Tabs, Space, Row, Col, message, Table, Checkbox } from 'antd';
-import { PlayCircleOutlined, PlusOutlined, DeleteOutlined, SaveOutlined, HistoryOutlined, ImportOutlined } from '@ant-design/icons';
+import { Card, Button, Input, Tag, Select, Switch, Tabs, Space, Row, Col, message, Table, Checkbox, Upload } from 'antd';
+import { PlayCircleOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import { ApiMethod } from '../../types';
 import { HttpMethodTag } from '../common';
 
@@ -16,6 +16,8 @@ interface ParamRow {
   value: string;
   description?: string;
   enabled: boolean;
+  type?: 'text' | 'file'; // 用于form-data类型选择
+  file?: File | null; // 用于存储上传的文件
 }
 
 const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
@@ -41,7 +43,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
   const [bodyType, setBodyType] = useState<'none' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary'>('raw');
   const [bodyContent, setBodyContent] = useState(api.body?.content || '');
   const [formData, setFormData] = useState<ParamRow[]>([
-    { key: '', value: '', description: '', enabled: true }
+    { key: '', value: '', description: '', enabled: true, type: 'text' }
   ]);
   
   // 认证状态
@@ -54,14 +56,18 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
     setParams: React.Dispatch<React.SetStateAction<ParamRow[]>>, 
     index: number, 
     field: keyof ParamRow, 
-    value: string | boolean
+    value: string | boolean | File | null
   ) => {
     const newParams = [...params];
     newParams[index] = { ...newParams[index], [field]: value };
     
     // 如果是最后一行且key不为空，自动添加新行
     if (index === params.length - 1 && field === 'key' && value && typeof value === 'string') {
-      newParams.push({ key: '', value: '', description: '', enabled: true });
+      const newRow: ParamRow = { key: '', value: '', description: '', enabled: true };
+      if (params === formData) {
+        newRow.type = 'text';
+      }
+      newParams.push(newRow);
     }
     
     setParams(newParams);
@@ -82,7 +88,8 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
   const getParamColumns = (
     params: ParamRow[], 
     setParams: React.Dispatch<React.SetStateAction<ParamRow[]>>,
-    showDescription = true
+    showDescription = true,
+    isFormData = false
   ) => [
     {
       title: '',
@@ -96,38 +103,84 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
       ),
     },
     {
-      title: 'Key',
+      title: '参数名',
       dataIndex: 'key',
-      width: '25%',
+      width: isFormData ? '20%' : '25%',
       render: (key: string, record: ParamRow, index: number) => (
         <Input
-          placeholder="参数名"
+          placeholder="请输入参数名"
           value={key}
           onChange={(e) => updateParamRow(params, setParams, index, 'key', e.target.value)}
           style={{ border: 'none', boxShadow: 'none' }}
         />
       ),
     },
-    {
-      title: 'Value',
-      dataIndex: 'value',
-      width: showDescription ? '35%' : '60%',
-      render: (value: string, record: ParamRow, index: number) => (
-        <Input
-          placeholder="参数值"
-          value={value}
-          onChange={(e) => updateParamRow(params, setParams, index, 'value', e.target.value)}
-          style={{ border: 'none', boxShadow: 'none' }}
-        />
+    ...(isFormData ? [{
+      title: '类型',
+      dataIndex: 'type',
+      width: '15%',
+      render: (type: string, record: ParamRow, index: number) => (
+        <Select
+          value={type || 'text'}
+          onChange={(value) => {
+            updateParamRow(params, setParams, index, 'type', value);
+            // 如果切换到text类型，清除文件
+            if (value === 'text') {
+              updateParamRow(params, setParams, index, 'file', null);
+            }
+          }}
+          style={{ width: '100%', border: 'none' }}
+          size="small"
+        >
+          <Option value="text">文本</Option>
+          <Option value="file">文件</Option>
+        </Select>
       ),
+    }] : []),
+    {
+      title: isFormData ? '值/文件' : '参数值',
+      dataIndex: 'value',
+      width: isFormData ? '30%' : (showDescription ? '35%' : '60%'),
+      render: (value: string, record: ParamRow, index: number) => {
+        if (isFormData && record.type === 'file') {
+          return (
+            <Upload
+              beforeUpload={(file) => {
+                updateParamRow(params, setParams, index, 'file', file);
+                updateParamRow(params, setParams, index, 'value', file.name);
+                return false; // 阻止自动上传
+              }}
+              showUploadList={false}
+              accept="*/*"
+            >
+              <Button 
+                size="small" 
+                icon={<UploadOutlined />}
+                style={{ width: '100%' }}
+              >
+                {record.file ? record.file.name : '选择文件'}
+              </Button>
+            </Upload>
+          );
+        }
+        
+        return (
+          <Input
+            placeholder={isFormData ? "请输入值" : "请输入参数值"}
+            value={value}
+            onChange={(e) => updateParamRow(params, setParams, index, 'value', e.target.value)}
+            style={{ border: 'none', boxShadow: 'none' }}
+          />
+        );
+      },
     },
     ...(showDescription ? [{
-      title: 'Description',
+      title: '描述',
       dataIndex: 'description',
-      width: '30%',
+      width: isFormData ? '25%' : '30%',
       render: (description: string, record: ParamRow, index: number) => (
         <Input
-          placeholder="描述"
+          placeholder="请输入描述"
           value={description}
           onChange={(e) => updateParamRow(params, setParams, index, 'description', e.target.value)}
           style={{ border: 'none', boxShadow: 'none' }}
@@ -193,20 +246,10 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                 block
                 style={{ fontWeight: 600 }}
               >
-                Send
+                发送请求
               </Button>
             </Col>
           </Row>
-        </div>
-
-        {/* 快速操作按钮 */}
-        <div style={{ marginBottom: 16 }}>
-          <Space>
-            <Button size="small" icon={<SaveOutlined />}>Save</Button>
-            <Button size="small" icon={<HistoryOutlined />}>History</Button>
-            <Button size="small" icon={<ImportOutlined />}>Import</Button>
-            <Tag color="blue">Saved requests: 12</Tag>
-          </Space>
         </div>
 
         {/* 参数配置标签页 */}
@@ -217,7 +260,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
               key: 'params',
               label: (
                 <span>
-                  Params 
+                  请求参数
                   <Tag color="blue" style={{ marginLeft: 4 }}>
                     {queryParams.filter(p => p.enabled && p.key).length}
                   </Tag>
@@ -226,7 +269,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
               children: (
                 <div>
                   <div style={{ marginBottom: 8, fontSize: '12px', color: '#666' }}>
-                    Query parameters are appended to the end of the request URL, following '?'.
+                    查询参数将附加在请求URL的末尾，跟在'?'之后。
                   </div>
                   <Table
                     dataSource={queryParams}
@@ -234,7 +277,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                     pagination={false}
                     size="small"
                     rowKey={(record, index) => index?.toString() || ''}
-                    showHeader={queryParams.some(p => p.key)}
+                    showHeader={true}
                     style={{ 
                       border: '1px solid #f0f0f0',
                       borderRadius: '6px'
@@ -245,7 +288,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
             },
             {
               key: 'authorization',
-              label: 'Authorization',
+              label: '身份认证',
               children: (
                 <div>
                   <div style={{ marginBottom: 16 }}>
@@ -253,11 +296,11 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                       value={authType}
                       onChange={setAuthType}
                       style={{ width: 200 }}
-                      placeholder="Select auth type"
+                      placeholder="选择认证类型"
                     >
-                      <Option value="none">No Auth</Option>
+                      <Option value="none">无认证</Option>
                       <Option value="bearer">Bearer Token</Option>
-                      <Option value="basic">Basic Auth</Option>
+                      <Option value="basic">基础认证</Option>
                       <Option value="api-key">API Key</Option>
                     </Select>
                   </div>
@@ -268,11 +311,11 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                       <Input.Password
                         value={authToken}
                         onChange={(e) => setAuthToken(e.target.value)}
-                        placeholder="Enter your bearer token"
+                        placeholder="请输入Bearer Token"
                         style={{ fontFamily: 'monospace' }}
                       />
                       <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
-                        This token will be sent in the Authorization header as "Bearer {'{token}'}"
+                        此Token将在Authorization请求头中以"Bearer {'{token}'}"的形式发送
                       </div>
                     </div>
                   )}
@@ -280,12 +323,12 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                   {authType === 'basic' && (
                     <Row gutter={16}>
                       <Col span={12}>
-                        <div style={{ marginBottom: 8, fontWeight: 500 }}>Username</div>
-                        <Input placeholder="Username" />
+                        <div style={{ marginBottom: 8, fontWeight: 500 }}>用户名</div>
+                        <Input placeholder="请输入用户名" />
                       </Col>
                       <Col span={12}>
-                        <div style={{ marginBottom: 8, fontWeight: 500 }}>Password</div>
-                        <Input.Password placeholder="Password" />
+                        <div style={{ marginBottom: 8, fontWeight: 500 }}>密码</div>
+                        <Input.Password placeholder="请输入密码" />
                       </Col>
                     </Row>
                   )}
@@ -293,18 +336,18 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                   {authType === 'api-key' && (
                     <Row gutter={16}>
                       <Col span={8}>
-                        <div style={{ marginBottom: 8, fontWeight: 500 }}>Key</div>
-                        <Input placeholder="API Key name" />
+                        <div style={{ marginBottom: 8, fontWeight: 500 }}>Key名称</div>
+                        <Input placeholder="API Key名称" />
                       </Col>
                       <Col span={8}>
-                        <div style={{ marginBottom: 8, fontWeight: 500 }}>Value</div>
-                        <Input.Password placeholder="API Key value" />
+                        <div style={{ marginBottom: 8, fontWeight: 500 }}>Key值</div>
+                        <Input.Password placeholder="API Key值" />
                       </Col>
                       <Col span={8}>
-                        <div style={{ marginBottom: 8, fontWeight: 500 }}>Add to</div>
+                        <div style={{ marginBottom: 8, fontWeight: 500 }}>添加到</div>
                         <Select defaultValue="header" style={{ width: '100%' }}>
-                          <Option value="header">Header</Option>
-                          <Option value="query">Query Params</Option>
+                          <Option value="header">请求头</Option>
+                          <Option value="query">查询参数</Option>
                         </Select>
                       </Col>
                     </Row>
@@ -316,7 +359,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
               key: 'headers',
               label: (
                 <span>
-                  Headers 
+                  请求头
                   <Tag color="green" style={{ marginLeft: 4 }}>
                     {headers.filter(h => h.enabled && h.key).length}
                   </Tag>
@@ -325,7 +368,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
               children: (
                 <div>
                   <div style={{ marginBottom: 8, fontSize: '12px', color: '#666' }}>
-                    Headers let the client and the server pass additional information with the HTTP request or response.
+                    请求头允许客户端和服务器传递HTTP请求或响应的附加信息。
                   </div>
                   <Table
                     dataSource={headers}
@@ -333,7 +376,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                     pagination={false}
                     size="small"
                     rowKey={(record, index) => index?.toString() || ''}
-                    showHeader={headers.some(h => h.key)}
+                    showHeader={true}
                     style={{ 
                       border: '1px solid #f0f0f0',
                       borderRadius: '6px'
@@ -344,23 +387,28 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
             },
             {
               key: 'body',
-              label: 'Body',
+              label: '请求体',
               children: (
                 <div>
                   <div style={{ marginBottom: 16 }}>
                     <Space>
-                      {['none', 'form-data', 'x-www-form-urlencoded', 'raw', 'binary'].map(type => (
-                        <label key={type} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
+                      {[
+                        { value: 'none', label: '无' },
+                        { value: 'form-data', label: 'form-data' },
+                        { value: 'x-www-form-urlencoded', label: 'x-www-form-urlencoded' },
+                        { value: 'raw', label: '原始数据' },
+                        { value: 'binary', label: '二进制' }
+                      ].map(type => (
+                        <label key={type.value} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                           <input
                             type="radio"
                             name="bodyType"
-                            value={type}
-                            checked={bodyType === type}
+                            value={type.value}
+                            checked={bodyType === type.value}
                             onChange={(e) => setBodyType(e.target.value as any)}
                             style={{ marginRight: 4 }}
                           />
-                          {type === 'x-www-form-urlencoded' ? 'x-www-form-urlencoded' : 
-                           type.charAt(0).toUpperCase() + type.slice(1)}
+                          {type.label}
                         </label>
                       ))}
                     </Space>
@@ -374,14 +422,34 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                       border: '1px dashed #d9d9d9',
                       borderRadius: '6px'
                     }}>
-                      This request does not have a body
+                      此请求没有请求体
                     </div>
                   )}
 
                   {bodyType === 'form-data' && (
                     <div>
                       <div style={{ marginBottom: 8, fontSize: '12px', color: '#666' }}>
-                        Form data allows you to send key-value pairs, and you can also send files.
+                        表单数据允许您发送键值对，也可以发送文件。
+                      </div>
+                      <Table
+                        dataSource={formData}
+                        columns={getParamColumns(formData, setFormData, true, true)}
+                        pagination={false}
+                        size="small"
+                        rowKey={(record, index) => index?.toString() || ''}
+                        showHeader={true}
+                        style={{ 
+                          border: '1px solid #f0f0f0',
+                          borderRadius: '6px'
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {bodyType === 'x-www-form-urlencoded' && (
+                    <div>
+                      <div style={{ marginBottom: 8, fontSize: '12px', color: '#666' }}>
+                        URL编码的表单数据，键值对将以URL编码的格式发送。
                       </div>
                       <Table
                         dataSource={formData}
@@ -389,7 +457,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                         pagination={false}
                         size="small"
                         rowKey={(record, index) => index?.toString() || ''}
-                        showHeader={formData.some(f => f.key)}
+                        showHeader={true}
                         style={{ 
                           border: '1px solid #f0f0f0',
                           borderRadius: '6px'
@@ -402,22 +470,22 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                     <div>
                       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
                         <Select value="json" style={{ width: 120 }}>
-                          <Option value="text">Text</Option>
+                          <Option value="text">文本</Option>
                           <Option value="javascript">JavaScript</Option>
                           <Option value="json">JSON</Option>
                           <Option value="html">HTML</Option>
                           <Option value="xml">XML</Option>
                         </Select>
-                        <Button size="small" onClick={formatJson}>Beautify</Button>
-                        <Button size="small">Minify</Button>
+                        <Button size="small" onClick={formatJson}>格式化</Button>
+                        <Button size="small">压缩</Button>
                         <span style={{ fontSize: '12px', color: '#666', marginLeft: 'auto' }}>
-                          {bodyContent.length} characters
+                          {bodyContent.length} 个字符
                         </span>
                       </div>
                       <TextArea
                         value={bodyContent}
                         onChange={(e) => setBodyContent(e.target.value)}
-                        placeholder="Enter request body"
+                        placeholder="请输入请求体内容"
                         rows={15}
                         style={{ 
                           fontFamily: 'JetBrains Mono, Monaco, Consolas, monospace',
@@ -428,77 +496,60 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                       />
                     </div>
                   )}
-                </div>
-              ),
-            },
-            {
-              key: 'pre-request',
-              label: 'Pre-request Script',
-              children: (
-                <div style={{ 
-                  padding: '40px', 
-                  textAlign: 'center', 
-                  color: '#999',
-                  border: '1px dashed #d9d9d9',
-                  borderRadius: '6px'
-                }}>
-                  <div>Add JavaScript code to execute before sending the request</div>
-                  <Button type="link">Learn more about pre-request scripts</Button>
-                </div>
-              ),
-            },
-            {
-              key: 'tests',
-              label: 'Tests',
-              children: (
-                <div style={{ 
-                  padding: '40px', 
-                  textAlign: 'center', 
-                  color: '#999',
-                  border: '1px dashed #d9d9d9',
-                  borderRadius: '6px'
-                }}>
-                  <div>Add JavaScript code to execute after receiving the response</div>
-                  <Button type="link">Learn more about test scripts</Button>
+
+                  {bodyType === 'binary' && (
+                    <div style={{ 
+                      padding: '40px', 
+                      textAlign: 'center', 
+                      color: '#999',
+                      border: '1px dashed #d9d9d9',
+                      borderRadius: '6px'
+                    }}>
+                      <Upload>
+                        <Button icon={<UploadOutlined />}>选择二进制文件</Button>
+                      </Upload>
+                      <div style={{ marginTop: 8 }}>支持上传任意格式的二进制文件</div>
+                    </div>
+                  )}
                 </div>
               ),
             },
             {
               key: 'settings',
-              label: 'Settings',
+              label: '设置',
               children: (
                 <div>
                   <Row gutter={[16, 16]}>
                     <Col span={12}>
-                      <div style={{ marginBottom: 8, fontWeight: 500 }}>Request timeout (ms)</div>
-                      <Input type="number" defaultValue="0" placeholder="0 for infinite" />
+                      <div style={{ marginBottom: 8, fontWeight: 500 }}>请求超时时间 (毫秒)</div>
+                      <Input type="number" defaultValue="0" placeholder="0表示无限制" />
                       <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
-                        How long to wait for a response (milliseconds)
+                        等待响应的最长时间（毫秒）
                       </div>
                     </Col>
                     <Col span={12}>
-                      <div style={{ marginBottom: 8, fontWeight: 500 }}>Max redirects</div>
+                      <div style={{ marginBottom: 8, fontWeight: 500 }}>最大重定向次数</div>
                       <Input type="number" defaultValue="5" />
                       <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
-                        Maximum number of redirects to follow
+                        允许跟随的最大重定向次数
                       </div>
                     </Col>
                     <Col span={24}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Switch defaultChecked />
-                        <span>Follow redirects</span>
+                        <span>跟随重定向</span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
-                        Automatically follow HTTP redirects
+                        自动跟随HTTP重定向
                       </div>
                     </Col>
                     <Col span={24}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Switch />
-                        <span>Follow original HTTP method</span>
+                        <span>保持原始HTTP方法</span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
-                        Use the original HTTP method when following redirects
+                        在跟随重定向时使用原始的HTTP方法
                       </div>
                     </Col>
                   </Row>
