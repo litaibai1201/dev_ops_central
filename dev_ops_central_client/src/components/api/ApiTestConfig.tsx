@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Card, Button, Input, Tag, Select, Switch, Tabs, Space, Row, Col, message, Table, Checkbox, Upload } from 'antd';
-import { PlayCircleOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Card, Button, Input, Tag, Select, Switch, Tabs, Space, Row, Col, message, Table, Checkbox, Upload, Modal, Dropdown, MenuProps } from 'antd';
+import { PlayCircleOutlined, DeleteOutlined, UploadOutlined, ImportOutlined, DownOutlined } from '@ant-design/icons';
 import { ApiMethod } from '../../types';
 import { HttpMethodTag } from '../common';
 
@@ -29,6 +29,12 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
     { key: '', value: '', description: '', enabled: true }
   ]);
   
+  // 导入示例参数的模态框状态
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [jsonToConvertModalVisible, setJsonToConvertModalVisible] = useState(false);
+  const [jsonContent, setJsonContent] = useState('');
+  const [convertTarget, setConvertTarget] = useState<'params' | 'formData' | 'headers'>('params');
+  
   // 请求头状态
   const [headers, setHeaders] = useState<ParamRow[]>(
     Object.entries(api.headers).map(([key, value]) => ({ 
@@ -50,6 +56,75 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
   const [authType, setAuthType] = useState<'none' | 'bearer' | 'basic' | 'api-key'>('none');
   const [authToken, setAuthToken] = useState('');
 
+  // URL参数解析函数
+  const parseUrlParams = (url: string): ParamRow[] => {
+    try {
+      const urlObj = new URL(url);
+      const params: ParamRow[] = [];
+      urlObj.searchParams.forEach((value, key) => {
+        params.push({ key, value, description: '', enabled: true });
+      });
+      // 始终添加一个空行
+      params.push({ key: '', value: '', description: '', enabled: true });
+      return params;
+    } catch {
+      // 如果不是完整URL，尝试解析查询参数部分
+      const queryIndex = url.indexOf('?');
+      if (queryIndex !== -1) {
+        const queryString = url.substring(queryIndex + 1);
+        const params: ParamRow[] = [];
+        const searchParams = new URLSearchParams(queryString);
+        searchParams.forEach((value, key) => {
+          params.push({ key, value, description: '', enabled: true });
+        });
+        params.push({ key: '', value: '', description: '', enabled: true });
+        return params;
+      }
+      return [{ key: '', value: '', description: '', enabled: true }];
+    }
+  };
+
+  // 构建带参数的URL
+  const buildUrlWithParams = (baseUrl: string, params: ParamRow[]): string => {
+    const enabledParams = params.filter(p => p.enabled && p.key.trim());
+    if (enabledParams.length === 0) {
+      return baseUrl;
+    }
+    
+    const [urlPart] = baseUrl.split('?');
+    const searchParams = new URLSearchParams();
+    enabledParams.forEach(param => {
+      searchParams.append(param.key, param.value);
+    });
+    
+    return `${urlPart}?${searchParams.toString()}`;
+  };
+
+  // 初始化时解析URL参数
+  useEffect(() => {
+    const initialUrl = `${baseUrl}${api.url}`;
+    setFullUrl(initialUrl);
+    const parsedParams = parseUrlParams(initialUrl);
+    if (parsedParams.length > 1 || parsedParams[0].key) {
+      setQueryParams(parsedParams);
+    }
+  }, [api.url, baseUrl]);
+
+  // 当URL变化时同步参数
+  const handleUrlChange = (newUrl: string) => {
+    setFullUrl(newUrl);
+    const parsedParams = parseUrlParams(newUrl);
+    setQueryParams(parsedParams);
+  };
+
+  // 当参数变化时同步URL
+  const handleParamsChange = (newParams: ParamRow[]) => {
+    setQueryParams(newParams);
+    const [urlPart] = fullUrl.split('?');
+    const newUrl = buildUrlWithParams(urlPart, newParams);
+    setFullUrl(newUrl);
+  };
+
   // 通用的参数更新函数
   const updateParamRow = (
     params: ParamRow[], 
@@ -70,7 +145,12 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
       newParams.push(newRow);
     }
     
-    setParams(newParams);
+    // 如果是查询参数，需要同步URL
+    if (params === queryParams) {
+      handleParamsChange(newParams);
+    } else {
+      setParams(newParams);
+    }
   };
 
   const removeParamRow = (
@@ -80,17 +160,46 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
   ) => {
     if (params.length > 1) {
       const newParams = params.filter((_, i) => i !== index);
-      setParams(newParams);
+      // 如果是查询参数，需要同步URL
+      if (params === queryParams) {
+        handleParamsChange(newParams);
+      } else {
+        setParams(newParams);
+      }
     }
   };
 
   // 参数表格列配置
   const getParamColumns = (
     params: ParamRow[], 
-    setParams: React.Dispatch<React.SetStateAction<ParamRow[]>>,
+    updateFunction: (newParams: ParamRow[]) => void,
     showDescription = true,
     isFormData = false
-  ) => [
+  ) => {
+    const updateRow = (index: number, field: keyof ParamRow, value: string | boolean | File | null) => {
+      const newParams = [...params];
+      newParams[index] = { ...newParams[index], [field]: value };
+      
+      // 如果是最后一行且key不为空，自动添加新行
+      if (index === params.length - 1 && field === 'key' && value && typeof value === 'string') {
+        const newRow: ParamRow = { key: '', value: '', description: '', enabled: true };
+        if (isFormData) {
+          newRow.type = 'text';
+        }
+        newParams.push(newRow);
+      }
+      
+      updateFunction(newParams);
+    };
+
+    const removeRow = (index: number) => {
+      if (params.length > 1) {
+        const newParams = params.filter((_, i) => i !== index);
+        updateFunction(newParams);
+      }
+    };
+
+    return [
     {
       title: '',
       dataIndex: 'enabled',
@@ -98,7 +207,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
       render: (enabled: boolean, record: ParamRow, index: number) => (
         <Checkbox
           checked={enabled}
-          onChange={(e) => updateParamRow(params, setParams, index, 'enabled', e.target.checked)}
+          onChange={(e) => updateRow(index, 'enabled', e.target.checked)}
         />
       ),
     },
@@ -110,7 +219,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
         <Input
           placeholder="请输入参数名 (Enter key name)"
           value={key}
-          onChange={(e) => updateParamRow(params, setParams, index, 'key', e.target.value)}
+          onChange={(e) => updateRow(index, 'key', e.target.value)}
           style={{ border: 'none', boxShadow: 'none' }}
         />
       ),
@@ -123,10 +232,10 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
         <Select
           value={type || 'text'}
           onChange={(value) => {
-            updateParamRow(params, setParams, index, 'type', value);
+            updateRow(index, 'type', value);
             // 如果切换到text类型，清除文件
             if (value === 'text') {
-              updateParamRow(params, setParams, index, 'file', null);
+              updateRow(index, 'file', null);
             }
           }}
           style={{ width: '100%', border: 'none' }}
@@ -146,8 +255,8 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
           return (
             <Upload
               beforeUpload={(file) => {
-                updateParamRow(params, setParams, index, 'file', file);
-                updateParamRow(params, setParams, index, 'value', file.name);
+                updateRow(index, 'file', file);
+                updateRow(index, 'value', file.name);
                 return false; // 阻止自动上传
               }}
               showUploadList={false}
@@ -168,7 +277,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
           <Input
             placeholder={isFormData ? "请输入值 (Enter value)" : "请输入参数值 (Enter parameter value)"}
             value={value}
-            onChange={(e) => updateParamRow(params, setParams, index, 'value', e.target.value)}
+            onChange={(e) => updateRow(index, 'value', e.target.value)}
             style={{ border: 'none', boxShadow: 'none' }}
           />
         );
@@ -182,7 +291,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
         <Input
           placeholder="请输入描述 (Enter description)"
           value={description}
-          onChange={(e) => updateParamRow(params, setParams, index, 'description', e.target.value)}
+          onChange={(e) => updateRow(index, 'description', e.target.value)}
           style={{ border: 'none', boxShadow: 'none' }}
         />
       ),
@@ -197,12 +306,13 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
             size="small"
             danger
             icon={<DeleteOutlined />}
-            onClick={() => removeParamRow(params, setParams, index)}
+            onClick={() => removeRow(index)}
           />
         )
       ),
     },
   ];
+  };
 
   const formatJson = () => {
     try {
@@ -211,6 +321,97 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
       message.success('JSON格式化成功');
     } catch (error) {
       message.error('JSON格式化失败，请检查格式');
+    }
+  };
+
+  // 导入示例参数
+  const importExampleParams = () => {
+    if (api.params && api.params.length > 0) {
+      const exampleParams: ParamRow[] = api.params.map(param => ({
+        key: param.name,
+        value: param.example || '',
+        description: param.description || '',
+        enabled: true
+      }));
+      exampleParams.push({ key: '', value: '', description: '', enabled: true });
+      handleParamsChange(exampleParams);
+      message.success('示例参数导入成功');
+    } else {
+      message.info('没有可导入的示例参数');
+    }
+  };
+
+  // 导入示例请求头
+  const importExampleHeaders = () => {
+    const exampleHeaders: ParamRow[] = Object.entries(api.headers).map(([key, value]) => ({
+      key,
+      value,
+      description: key === 'Content-Type' ? '请求内容类型' : '',
+      enabled: true
+    }));
+    exampleHeaders.push({ key: '', value: '', description: '', enabled: true });
+    setHeaders(exampleHeaders);
+    message.success('示例请求头导入成功');
+  };
+
+  // 导入示例请求体
+  const importExampleBody = () => {
+    if (api.body?.content) {
+      setBodyContent(api.body.content);
+      setBodyType('raw');
+      message.success('示例请求体导入成功');
+    } else {
+      message.info('没有可导入的示例请求体');
+    }
+  };
+
+  // JSON转列表数据
+  const convertJsonToParams = () => {
+    try {
+      const jsonObj = JSON.parse(jsonContent);
+      const newParams: ParamRow[] = [];
+      
+      const flattenObject = (obj: any, prefix = ''): void => {
+        Object.keys(obj).forEach(key => {
+          const fullKey = prefix ? `${prefix}.${key}` : key;
+          const value = obj[key];
+          
+          if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+            flattenObject(value, fullKey);
+          } else {
+            newParams.push({
+              key: fullKey,
+              value: Array.isArray(value) ? JSON.stringify(value) : String(value),
+              description: '',
+              enabled: true,
+              ...(convertTarget === 'formData' ? { type: 'text' as const } : {})
+            });
+          }
+        });
+      };
+      
+      flattenObject(jsonObj);
+      newParams.push({ 
+        key: '', 
+        value: '', 
+        description: '', 
+        enabled: true,
+        ...(convertTarget === 'formData' ? { type: 'text' as const } : {})
+      });
+      
+      if (convertTarget === 'params') {
+        handleParamsChange(newParams);
+      } else if (convertTarget === 'formData') {
+        setFormData(newParams);
+      } else if (convertTarget === 'headers') {
+        setHeaders(newParams);
+      }
+      
+      setJsonToConvertModalVisible(false);
+      setJsonContent('');
+      message.success('JSON数据转换成功');
+    } catch (error) {
+      message.error('JSON格式错误，请检查后重试');
     }
   };
 
@@ -232,7 +433,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
             <Col span={18}>
               <Input
                 value={fullUrl}
-                onChange={(e) => setFullUrl(e.target.value)}
+                onChange={(e) => handleUrlChange(e.target.value)}
                 placeholder="请输入请求URL (Enter request URL)"
                 size="large"
                 style={{ fontFamily: 'monospace' }}
@@ -253,6 +454,67 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
         </div>
 
         {/* 参数配置标签页 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ flex: 1 }}>
+            {/* 空占位符，让按钮右对齐 */}
+          </div>
+          <div>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'importParams',
+                    label: '导入示例参数',
+                    onClick: importExampleParams
+                  },
+                  {
+                    key: 'importHeaders', 
+                    label: '导入示例请求头',
+                    onClick: importExampleHeaders
+                  },
+                  {
+                    key: 'importBody',
+                    label: '导入示例请求体',
+                    onClick: importExampleBody
+                  },
+                  {
+                    key: 'divider1',
+                    type: 'divider'
+                  },
+                  {
+                    key: 'jsonToParams',
+                    label: 'JSON转查询参数',
+                    onClick: () => {
+                      setConvertTarget('params');
+                      setJsonToConvertModalVisible(true);
+                    }
+                  },
+                  {
+                    key: 'jsonToFormData',
+                    label: 'JSON转Form-data',
+                    onClick: () => {
+                      setConvertTarget('formData');
+                      setJsonToConvertModalVisible(true);
+                    }
+                  },
+                  {
+                    key: 'jsonToHeaders',
+                    label: 'JSON转请求头',
+                    onClick: () => {
+                      setConvertTarget('headers');
+                      setJsonToConvertModalVisible(true);
+                    }
+                  }
+                ]
+              }}
+              placement="bottomRight"
+            >
+              <Button icon={<ImportOutlined />}>
+                导入示例参数 <DownOutlined />
+              </Button>
+            </Dropdown>
+          </div>
+        </div>
         <Tabs
           defaultActiveKey="params"
           items={[
@@ -273,7 +535,7 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                   </div>
                   <Table
                     dataSource={queryParams}
-                    columns={getParamColumns(queryParams, setQueryParams)}
+                    columns={getParamColumns(queryParams, handleParamsChange)}
                     pagination={false}
                     size="small"
                     rowKey={(record, index) => index?.toString() || ''}
@@ -581,6 +843,56 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
           ]}
         />
       </Card>
+      
+      {/* JSON转换模态框 */}
+      <Modal
+        title="JSON转列表数据"
+        open={jsonToConvertModalVisible}
+        onOk={convertJsonToParams}
+        onCancel={() => {
+          setJsonToConvertModalVisible(false);
+          setJsonContent('');
+        }}
+        width={600}
+        okText="转换"
+        cancelText="取消"
+      >
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 8, fontWeight: 500 }}>
+            转换目标：
+            {convertTarget === 'params' && '查询参数 (Query Parameters)'}
+            {convertTarget === 'formData' && 'Form-data'}
+            {convertTarget === 'headers' && '请求头 (Headers)'}
+          </div>
+          <div style={{ fontSize: '12px', color: '#666', marginBottom: 12 }}>
+            请输入JSON数据，将会自动解析为键值对。嵌套对象将使用点号分隔符连接。
+            <br />
+            (Enter JSON data, it will be automatically parsed into key-value pairs. Nested objects will be connected with dot notation.)
+          </div>
+          <TextArea
+            value={jsonContent}
+            onChange={(e) => setJsonContent(e.target.value)}
+            placeholder='{
+  "username": "john_doe",
+  "profile": {
+    "email": "john@example.com",
+    "age": 25
+  },
+  "tags": ["developer", "admin"]
+}'
+            rows={12}
+            style={{ 
+              fontFamily: 'JetBrains Mono, Monaco, Consolas, monospace',
+              fontSize: '13px'
+            }}
+          />
+          <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+            示例输出：username=john_doe, profile.email=john@example.com, profile.age=25, tags=["developer","admin"]
+            <br />
+            (Example output: username=john_doe, profile.email=john@example.com, profile.age=25, tags=["developer","admin"])
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
