@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Input, Tag, Select, Switch, Tabs, Space, Row, Col, message, Table, Checkbox, Upload, Modal, Dropdown, MenuProps } from 'antd';
+import { Card, Button, Input, Tag, Select, Switch, Tabs, Space, Row, Col, message, Table, Checkbox, Upload, Modal, Dropdown, MenuProps, Tooltip } from 'antd';
 import { PlayCircleOutlined, DeleteOutlined, UploadOutlined, ImportOutlined, DownOutlined } from '@ant-design/icons';
 import { ApiMethod } from '../../types';
 import { HttpMethodTag } from '../common';
@@ -19,6 +19,37 @@ interface ParamRow {
   type?: 'text' | 'file'; // 用于form-data类型选择
   file?: File | null; // 用于存储上传的文件
 }
+
+// 临时缓存存储 - 页面刷新后会重置
+interface TestConfigCache {
+  baseUrl: string;
+  fullUrl: string;
+  queryParams: ParamRow[];
+  headers: ParamRow[];
+  bodyType: 'none' | 'form-data' | 'x-www-form-urlencoded' | 'raw' | 'binary';
+  bodyContent: string;
+  formData: ParamRow[];
+  authType: 'none' | 'bearer' | 'basic' | 'api-key';
+  authToken: string;
+  basicAuth?: {
+    username: string;
+    password: string;
+  };
+  apiKey?: {
+    name: string;
+    value: string;
+    addTo: 'header' | 'query';
+  };
+  settings?: {
+    timeout: number;
+    maxRedirects: number;
+    followRedirects: boolean;
+    followOriginalMethod: boolean;
+  };
+}
+
+// 内存中的缓存存储 - 以API ID为键
+const testConfigCache: Map<string, TestConfigCache> = new Map();
 
 const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
   const [baseUrl, setBaseUrl] = useState('https://api.example.com');
@@ -55,8 +86,113 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
   // 认证状态
   const [authType, setAuthType] = useState<'none' | 'bearer' | 'basic' | 'api-key'>('none');
   const [authToken, setAuthToken] = useState('');
+  const [basicUsername, setBasicUsername] = useState('');
+  const [basicPassword, setBasicPassword] = useState('');
+  const [apiKeyName, setApiKeyName] = useState('');
+  const [apiKeyValue, setApiKeyValue] = useState('');
+  const [apiKeyAddTo, setApiKeyAddTo] = useState<'header' | 'query'>('header');
+  
+  // 设置状态
+  const [timeout, setTimeout] = useState(0);
+  const [maxRedirects, setMaxRedirects] = useState(5);
+  const [followRedirects, setFollowRedirects] = useState(true);
+  const [followOriginalMethod, setFollowOriginalMethod] = useState(false);
 
-  // URL参数解析函数
+  // 缓存保存函数
+  const saveToCache = () => {
+    const cacheData: TestConfigCache = {
+      baseUrl,
+      fullUrl,
+      queryParams,
+      headers,
+      bodyType,
+      bodyContent,
+      formData,
+      authType,
+      authToken,
+      basicAuth: {
+        username: basicUsername,
+        password: basicPassword
+      },
+      apiKey: {
+        name: apiKeyName,
+        value: apiKeyValue,
+        addTo: apiKeyAddTo
+      },
+      settings: {
+        timeout,
+        maxRedirects,
+        followRedirects,
+        followOriginalMethod
+      }
+    };
+    testConfigCache.set(api.id, cacheData);
+  };
+
+  // 从缓存加载函数
+  const loadFromCache = () => {
+    const cached = testConfigCache.get(api.id);
+    if (cached) {
+      setBaseUrl(cached.baseUrl);
+      setFullUrl(cached.fullUrl);
+      setQueryParams(cached.queryParams);
+      setHeaders(cached.headers);
+      setBodyType(cached.bodyType);
+      setBodyContent(cached.bodyContent);
+      setFormData(cached.formData);
+      setAuthType(cached.authType);
+      setAuthToken(cached.authToken);
+      if (cached.basicAuth) {
+        setBasicUsername(cached.basicAuth.username);
+        setBasicPassword(cached.basicAuth.password);
+      }
+      if (cached.apiKey) {
+        setApiKeyName(cached.apiKey.name);
+        setApiKeyValue(cached.apiKey.value);
+        setApiKeyAddTo(cached.apiKey.addTo);
+      }
+      if (cached.settings) {
+        setTimeout(cached.settings.timeout);
+        setMaxRedirects(cached.settings.maxRedirects);
+        setFollowRedirects(cached.settings.followRedirects);
+        setFollowOriginalMethod(cached.settings.followOriginalMethod);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  // 清除缓存函数
+  const clearCache = () => {
+    testConfigCache.delete(api.id);
+    // 重置为默认值
+    setBaseUrl('https://api.example.com');
+    setFullUrl(`https://api.example.com${api.url}`);
+    setQueryParams([{ key: '', value: '', description: '', enabled: true }]);
+    setHeaders(
+      Object.entries(api.headers).map(([key, value]) => ({ 
+        key, 
+        value, 
+        description: key === 'Content-Type' ? '请求内容类型' : '', 
+        enabled: true 
+      })).concat([{ key: '', value: '', description: '', enabled: true }])
+    );
+    setBodyType('raw');
+    setBodyContent(api.body?.content || '');
+    setFormData([{ key: '', value: '', description: '', enabled: true, type: 'text' }]);
+    setAuthType('none');
+    setAuthToken('');
+    setBasicUsername('');
+    setBasicPassword('');
+    setApiKeyName('');
+    setApiKeyValue('');
+    setApiKeyAddTo('header');
+    setTimeout(0);
+    setMaxRedirects(5);
+    setFollowRedirects(true);
+    setFollowOriginalMethod(false);
+    message.success('缓存已清除，数据已重置');
+  };
   const parseUrlParams = (url: string): ParamRow[] => {
     try {
       const urlObj = new URL(url);
@@ -100,15 +236,34 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
     return `${urlPart}?${searchParams.toString()}`;
   };
 
-  // 初始化时解析URL参数
+  // 初始化时加载缓存或解析URL参数
   useEffect(() => {
-    const initialUrl = `${baseUrl}${api.url}`;
-    setFullUrl(initialUrl);
-    const parsedParams = parseUrlParams(initialUrl);
-    if (parsedParams.length > 1 || parsedParams[0].key) {
-      setQueryParams(parsedParams);
+    // 先尝试从缓存加载
+    const cacheLoaded = loadFromCache();
+    
+    if (!cacheLoaded) {
+      // 如果没有缓存，使用默认初始化
+      const initialUrl = `${baseUrl}${api.url}`;
+      setFullUrl(initialUrl);
+      const parsedParams = parseUrlParams(initialUrl);
+      if (parsedParams.length > 1 || parsedParams[0].key) {
+        setQueryParams(parsedParams);
+      }
     }
-  }, [api.url, baseUrl]);
+  }, [api.id]); // 依赖api.id，当切换API时重新加载
+
+  // 数据变化时自动保存到缓存
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      saveToCache();
+    }, 500); // 防抖动，500ms后保存
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    baseUrl, fullUrl, queryParams, headers, bodyType, bodyContent, formData,
+    authType, authToken, basicUsername, basicPassword, apiKeyName, apiKeyValue, apiKeyAddTo,
+    timeout, maxRedirects, followRedirects, followOriginalMethod
+  ]);
 
   // 当URL变化时同步参数
   const handleUrlChange = (newUrl: string) => {
@@ -440,15 +595,37 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
               />
             </Col>
             <Col span={4}>
-              <Button 
-                type="primary" 
-                size="large" 
-                icon={<PlayCircleOutlined />}
-                block
-                style={{ fontWeight: 600 }}
-              >
-                发送请求 (Send)
-              </Button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <Button 
+                  type="primary" 
+                  size="large" 
+                  icon={<PlayCircleOutlined />}
+                  block
+                  style={{ fontWeight: 600 }}
+                >
+                  发送请求 (Send)
+                </Button>
+                {testConfigCache.has(api.id) && (
+                  <div style={{ 
+                    fontSize: '10px', 
+                    color: '#52c41a', 
+                    textAlign: 'center',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 2
+                  }}>
+                    <span style={{ 
+                      width: 6, 
+                      height: 6, 
+                      borderRadius: '50%', 
+                      backgroundColor: '#52c41a',
+                      display: 'inline-block'
+                    }}></span>
+                    已缓存
+                  </div>
+                )}
+              </div>
             </Col>
           </Row>
         </div>
@@ -458,7 +635,18 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
           <div style={{ flex: 1 }}>
             {/* 空占位符，让按钮右对齐 */}
           </div>
-          <div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Tooltip title={`清除当前API的缓存数据，恢复为默认设置。当前全局缓存: ${testConfigCache.size} 个API`}>
+              <Button 
+                type="default" 
+                size="small"
+                onClick={clearCache}
+                style={{ color: '#ff4d4f' }}
+                disabled={!testConfigCache.has(api.id)}
+              >
+                清除缓存
+              </Button>
+            </Tooltip>
             <Dropdown
               menu={{
                 items: [
@@ -588,11 +776,19 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                     <Row gutter={16}>
                       <Col span={12}>
                         <div style={{ marginBottom: 8, fontWeight: 500 }}>用户名 (Username)</div>
-                        <Input placeholder="请输入用户名 (Enter username)" />
+                        <Input 
+                          placeholder="请输入用户名 (Enter username)" 
+                          value={basicUsername}
+                          onChange={(e) => setBasicUsername(e.target.value)}
+                        />
                       </Col>
                       <Col span={12}>
                         <div style={{ marginBottom: 8, fontWeight: 500 }}>密码 (Password)</div>
-                        <Input.Password placeholder="请输入密码 (Enter password)" />
+                        <Input.Password 
+                          placeholder="请输入密码 (Enter password)" 
+                          value={basicPassword}
+                          onChange={(e) => setBasicPassword(e.target.value)}
+                        />
                       </Col>
                     </Row>
                   )}
@@ -601,15 +797,27 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                     <Row gutter={16}>
                       <Col span={8}>
                         <div style={{ marginBottom: 8, fontWeight: 500 }}>Key名称 (Key Name)</div>
-                        <Input placeholder="API Key名称 (API Key name)" />
+                        <Input 
+                          placeholder="API Key名称 (API Key name)" 
+                          value={apiKeyName}
+                          onChange={(e) => setApiKeyName(e.target.value)}
+                        />
                       </Col>
                       <Col span={8}>
                         <div style={{ marginBottom: 8, fontWeight: 500 }}>Key值 (Key Value)</div>
-                        <Input.Password placeholder="API Key值 (API Key value)" />
+                        <Input.Password 
+                          placeholder="API Key值 (API Key value)" 
+                          value={apiKeyValue}
+                          onChange={(e) => setApiKeyValue(e.target.value)}
+                        />
                       </Col>
                       <Col span={8}>
                         <div style={{ marginBottom: 8, fontWeight: 500 }}>添加到 (Add to)</div>
-                        <Select defaultValue="header" style={{ width: '100%' }}>
+                        <Select 
+                          value={apiKeyAddTo} 
+                          onChange={setApiKeyAddTo}
+                          style={{ width: '100%' }}
+                        >
                           <Option value="header">请求头 (Header)</Option>
                           <Option value="query">查询参数 (Query Params)</Option>
                         </Select>
@@ -798,7 +1006,12 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                   <Row gutter={[16, 16]}>
                     <Col span={12}>
                       <div style={{ marginBottom: 8, fontWeight: 500 }}>请求超时时间 (Request timeout) (毫秒 ms)</div>
-                      <Input type="number" defaultValue="0" placeholder="0表示无限制 (0 for infinite)" />
+                      <Input 
+                        type="number" 
+                        value={timeout} 
+                        onChange={(e) => setTimeout(Number(e.target.value))}
+                        placeholder="0表示无限制 (0 for infinite)" 
+                      />
                       <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
                         等待响应的最长时间（毫秒）
                         <br />
@@ -807,7 +1020,11 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                     </Col>
                     <Col span={12}>
                       <div style={{ marginBottom: 8, fontWeight: 500 }}>最大重定向次数 (Max redirects)</div>
-                      <Input type="number" defaultValue="5" />
+                      <Input 
+                        type="number" 
+                        value={maxRedirects} 
+                        onChange={(e) => setMaxRedirects(Number(e.target.value))}
+                      />
                       <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
                         允许跟随的最大重定向次数
                         <br />
@@ -816,7 +1033,10 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                     </Col>
                     <Col span={24}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Switch defaultChecked />
+                        <Switch 
+                          checked={followRedirects} 
+                          onChange={setFollowRedirects}
+                        />
                         <span>跟随重定向 (Follow redirects)</span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
@@ -827,7 +1047,10 @@ const ApiTestConfig: React.FC<ApiTestConfigProps> = ({ api }) => {
                     </Col>
                     <Col span={24}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Switch />
+                        <Switch 
+                          checked={followOriginalMethod}
+                          onChange={setFollowOriginalMethod}
+                        />
                         <span>保持原始HTTP方法 (Follow original HTTP method)</span>
                       </div>
                       <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
