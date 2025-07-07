@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Space, Typography, Descriptions, Tag, Table, Tabs, Divider, Tooltip, Badge, Empty, Row, Col } from 'antd';
+import { Card, Button, Space, Typography, Descriptions, Tag, Table, Tabs, Divider, Tooltip, Badge, Empty, Row, Col, message } from 'antd';
 import { 
   ArrowLeftOutlined, 
   ApiOutlined, 
@@ -28,6 +28,7 @@ import {
   usePageContext
 } from '../../components/common';
 import type { ColumnsType } from 'antd/es/table';
+import ProjectEditModal from './ProjectEditModal';
 
 interface ProjectDetailPageProps {
   user: User;
@@ -42,6 +43,35 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
   const [apis, setApis] = useState<ApiMethod[]>([]);
   const [folders, setFolders] = useState<ApiFolder[]>([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
+
+  // 处理项目更新
+  const handleUpdateProject = async (updatedData: Partial<Project>) => {
+    setUpdateLoading(true);
+    try {
+      // 模拟API调用延迟
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // 更新项目状态
+      if (project) {
+        const updatedProject = { ...project, ...updatedData };
+        setProject(updatedProject);
+        
+        // 如果项目名称更改，更新面包屑
+        if (updatedData.name && updatedData.name !== project.name) {
+          setProjectName(updatedData.name);
+        }
+        
+        message.success('专案信息更新成功');
+      }
+    } catch (error) {
+      console.error('更新项目失败:', error);
+      message.error('更新失败，请重试');
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
 
   // 模拟获取项目数据
   useEffect(() => {
@@ -596,7 +626,13 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
           </div>
           <div style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 8 }}>
             <Space size="small">
-              <Button icon={<EditOutlined />} size="middle">编辑</Button>
+              <Button 
+                icon={<EditOutlined />} 
+                size="middle"
+                onClick={() => setEditModalOpen(true)}
+              >
+                编辑
+              </Button>
               <Button type="primary" icon={<ApiOutlined />} size="middle">
                 添加接口
               </Button>
@@ -609,6 +645,17 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
       <div>
         {tabItems.find(item => item.key === activeTab)?.children}
       </div>
+
+      {/* 编辑模态框 */}
+      {project && (
+        <ProjectEditModal
+          project={project}
+          open={editModalOpen}
+          onClose={() => setEditModalOpen(false)}
+          onSave={handleUpdateProject}
+          loading={updateLoading}
+        />
+      )}
     </div>
   );
 };
