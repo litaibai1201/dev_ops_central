@@ -9,6 +9,7 @@ import DashboardPage from './pages/dashboard/DashboardPage';
 import ProjectDetailPage from './pages/projects/ProjectDetailPage';
 import CreateProjectPage from './pages/projects/CreateProjectPage';
 import ApiDetailPage from './pages/apis/ApiDetailPage';
+import CreateApiPage from './pages/apis/CreateApiPage';
 import GroupManagementPage from './pages/groups/GroupManagementPage';
 import CreateGroupPage from './pages/groups/CreateGroupPage';
 import GroupDetailPage from './pages/groups/GroupDetailPage';
@@ -74,6 +75,7 @@ const App: React.FC = () => {
               <Route path="/projects" element={<Navigate to="/dashboard" replace />} />
               <Route path="/projects/create" element={<CreateProjectPage user={user} />} />
               <Route path="/projects/:projectId" element={<ProjectDetailPage user={user} />} />
+              <Route path="/projects/:projectId/apis/create" element={<CreateApiPage user={user} />} />
               <Route path="/projects/:projectId/apis/:apiId" element={<ApiDetailPage user={user} />} />
               
               {/* 群组管理 */}

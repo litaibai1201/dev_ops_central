@@ -633,7 +633,12 @@ const ProjectDetailPage: React.FC<ProjectDetailPageProps> = ({ user }) => {
               >
                 编辑
               </Button>
-              <Button type="primary" icon={<ApiOutlined />} size="middle">
+              <Button 
+                type="primary" 
+                icon={<ApiOutlined />} 
+                size="middle"
+                onClick={() => navigate(`/projects/${projectId}/apis/create`)}
+              >
                 添加接口
               </Button>
             </Space>
