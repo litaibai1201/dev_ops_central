@@ -815,21 +815,19 @@ const CreateApiPage: React.FC<CreateApiPageProps> = ({ user }) => {
         justifyContent: 'space-between',
         marginBottom: 24
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div>
+          <Title level={2} style={{ margin: 0 }}>
+            <ApiOutlined /> 新增接口
+          </Title>
+          <Text type="secondary">为 {project.name} 添加新的API接口</Text>
+        </div>
+        <Space>
           <Button 
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(`/projects/${projectId}`)}
           >
-            返回项目
+            返回
           </Button>
-          <div>
-            <Title level={2} style={{ margin: 0 }}>
-              <ApiOutlined /> 添加新接口
-            </Title>
-            <Text type="secondary">为 {project.name} 添加新的API接口</Text>
-          </div>
-        </div>
-        <Space>
           <Button 
             type="primary"
             icon={<SaveOutlined />}
