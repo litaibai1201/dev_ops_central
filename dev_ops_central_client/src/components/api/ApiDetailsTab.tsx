@@ -1,13 +1,11 @@
 import React from 'react';
 import { ApiMethod } from '../../types';
-import {
-  ApiBasicInfo,
-  ApiHeadersTable,
-  ApiParametersTable,
-  ApiResponseParameters,
-  ApiRequestBody,
-  ApiResponseExample
-} from '../api';
+import ApiBasicInfo from './ApiBasicInfo';
+import ApiHeadersTable from './ApiHeadersTable';
+import ApiParametersTable from './ApiParametersTable';
+import ApiResponseParameters from './ApiResponseParameters';
+import ApiRequestBody from './ApiRequestBody';
+import ApiResponseExample from './ApiResponseExample';
 
 interface ApiDetailsTabProps {
   api: ApiMethod;

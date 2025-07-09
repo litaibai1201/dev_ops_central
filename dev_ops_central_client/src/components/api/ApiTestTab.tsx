@@ -1,6 +1,7 @@
 import React from 'react';
 import { ApiMethod } from '../../types';
-import { ApiTestConfig, ApiTestResult } from '../api';
+import ApiTestConfig from './ApiTestConfig';
+import ApiTestResult from './ApiTestResult';
 
 interface ApiTestTabProps {
   api: ApiMethod;
