@@ -339,7 +339,12 @@ const ApiDetailPage: React.FC<ApiDetailPageProps> = ({ user }) => {
           </div>
           <div style={{ flexShrink: 0, alignSelf: 'flex-end', marginBottom: 8 }}>
             <Space size="small">
-              <Button type="primary" icon={<EditOutlined />} size="middle">
+              <Button 
+                type="primary" 
+                icon={<EditOutlined />} 
+                size="middle"
+                onClick={() => navigate(`/projects/${projectId}/apis/${apiId}/edit`)}
+              >
                 编辑接口
               </Button>
             </Space>
