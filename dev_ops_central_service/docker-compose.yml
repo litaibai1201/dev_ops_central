@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # MySQL数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: devops_central_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: dev_ops_central
+      MYSQL_USER: devops_user
+      MYSQL_PASSWORD: devops_pass
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/mysql-init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - devops_network
+
+  # Redis缓存服务（可选）
+  redis:
+    image: redis:7-alpine
+    container_name: devops_central_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - devops_network
+
+  # 应用服务
+  app:
+    build: .
+    container_name: devops_central_app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - DATABASE_URL=mysql+pymysql://devops_user:devops_pass@mysql:3306/dev_ops_central
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - .:/app
+    networks:
+      - devops_network
+    # 开发模式下的启动命令
+    command: python app.py
+
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  devops_network:
+    driver: bridge
