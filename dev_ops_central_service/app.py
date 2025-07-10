@@ -341,15 +341,38 @@ def index():
 
 if __name__ == '__main__':
     # 开发模式运行
-    port = int(os.getenv('PORT', 5000))
+    port = int(os.getenv('PORT', 5001))
     debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
     
     print(f"\n启动开发服务器...")
     print(f"地址: http://localhost:{port}")
     print(f"调试模式: {debug}")
     
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=debug
-    )
+    try:
+        app.run(
+            host='0.0.0.0',
+            port=port,
+            debug=debug
+        )
+    except ImportError as e:
+        if 'watchdog' in str(e) or 'EVENT_TYPE_OPENED' in str(e):
+            print(f"\n❌ watchdog 版本兼容性问题: {e}")
+            print("\n解决方案:")
+            print("1. 运行: pip install watchdog==3.0.0")
+            print("2. 或者运行: bash scripts/fix_watchdog.sh")
+            print("3. 或者禁用调试模式")
+            print("\n尝试使用非调试模式启动...")
+            
+            try:
+                app.run(
+                    host='0.0.0.0',
+                    port=port,
+                    debug=False,
+                    use_reloader=False
+                )
+            except Exception as fallback_e:
+                print(f"❌ 启动失败: {fallback_e}")
+                print("\n请运行以下命令修复:")
+                print("pip install watchdog==3.0.0")
+        else:
+            raise e
