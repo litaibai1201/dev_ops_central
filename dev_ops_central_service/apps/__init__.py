@@ -52,7 +52,7 @@ def register_blueprints(api):
     from apps.modules.projects import projects_blp
     from apps.modules.apis import apis_blp
     from apps.modules.join_requests import join_requests_blp
-    print(11111, join_requests_blp)
+    
     # 注册蓝图
     api.register_blueprint(auth_blp)
     api.register_blueprint(users_blp)

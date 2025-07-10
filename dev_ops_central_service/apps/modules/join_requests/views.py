@@ -9,7 +9,7 @@ from flask_jwt_extended import jwt_required
 from apps.utils import get_current_user, error_response
 from apps.schemas import (
     JoinRequestSearchSchema, JoinRequestCreateSchema, JoinRequestHandleSchema,
-    BatchJoinRequestHandleSchema, ApiResponseSchema
+    BatchJoinRequestHandleSchema, ApiResponseSchema, RequestStatisticsQuerySchema
 )
 from .controllers import JoinRequestController
 
@@ -114,7 +114,7 @@ class GroupPendingRequestsAPI(MethodView):
 @join_requests_blp.route('/statistics')
 class RequestsStatisticsAPI(MethodView):
     @jwt_required()
-    @join_requests_blp.arguments({'group_id': 'string', 'user_id': 'string'}, location='query')
+    @join_requests_blp.arguments(RequestStatisticsQuerySchema, location='query')
     @join_requests_blp.response(200, ApiResponseSchema)
     def get(self, query_args):
         """获取申请统计信息"""

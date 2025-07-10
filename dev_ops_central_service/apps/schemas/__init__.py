@@ -403,3 +403,8 @@ class TestResultSchema(Schema):
     errors = fields.List(fields.String())
     executedAt = fields.DateTime()
     executedBy = fields.String()
+
+class RequestStatisticsQuerySchema(Schema):
+    """API文档中的申请统计查询Schema"""
+    group_id = fields.String()
+    user_id = fields.String()
