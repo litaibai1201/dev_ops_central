@@ -122,9 +122,9 @@ python app.py
 
 ### 3. 访问应用
 
-- **API服务**: http://localhost:5000
-- **API文档**: http://localhost:5000/docs
-- **健康检查**: http://localhost:5000/api/health
+- **API服务**: http://localhost:5001
+- **API文档**: http://localhost:5001/docs
+- **健康检查**: http://localhost:5001/api/health
 
 ## 🔧 配置说明
 
@@ -200,7 +200,7 @@ CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 - `PUT /api/projects/{project_id}/apis/{api_id}` - 更新API接口
 - `DELETE /api/projects/{project_id}/apis/{api_id}` - 删除API接口
 
-完整的API文档请访问：http://localhost:5000/docs
+完整的API文档请访问：http://localhost:5001/docs
 
 ## 🧪 测试
 
@@ -253,7 +253,7 @@ docker build -t devops-central-api .
 # 运行容器
 docker run -d \
   --name devops-central \
-  -p 5000:5000 \
+  -p 5001:5001 \
   -e DATABASE_URL=mysql+pymysql://user:pass@host:3306/db \
   devops-central-api
 ```
@@ -273,7 +273,7 @@ docker run -d \
 
 3. **启动服务**
    ```bash
-   gunicorn --bind 0.0.0.0:5000 --workers 4 app:app
+   gunicorn --bind 0.0.0.0:5001 --workers 4 app:app
    ```
 
 ## 🔨 开发指南

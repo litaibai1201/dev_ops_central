@@ -39,7 +39,7 @@ services:
     container_name: devops_central_app
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5001:5001"
     environment:
       - FLASK_ENV=development
       - DATABASE_URL=mysql+pymysql://devops_user:devops_pass@mysql:3306/dev_ops_central

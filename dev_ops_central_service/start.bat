@@ -90,9 +90,9 @@ if %ERRORLEVEL% neq 0 (
 
 REM 启动应用
 echo 🚀 启动应用...
-echo 应用将在 http://localhost:5000 启动
-echo API文档: http://localhost:5000/docs
-echo 健康检查: http://localhost:5000/api/health
+echo 应用将在 http://localhost:5001 启动
+echo API文档: http://localhost:5001/docs
+echo 健康检查: http://localhost:5001/api/health
 echo.
 echo 按 Ctrl+C 停止服务
 echo.

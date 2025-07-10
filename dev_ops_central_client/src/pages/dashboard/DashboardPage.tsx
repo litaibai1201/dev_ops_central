@@ -10,7 +10,6 @@ import { User } from '../../types';
 import { 
   PageHeader, 
   StatisticsCards, 
-  SearchAndFilterBar, 
   LoadingState,
   getProjectColumns,
   getProjectStats,
@@ -18,6 +17,7 @@ import {
   PermissionInfo,
   PermissionChecker
 } from '../../components/common';
+import { useProjectData, useGroupData, useUserStats } from '../../components/common/DataService';
 
 interface DashboardPageProps {
   user: User;
@@ -27,91 +27,37 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ user }) => {
   const navigate = useNavigate();
   const permissions = new PermissionChecker(user);
   
-  // 模拟项目数据
-  const projects = [
-    {
-      id: '1',
-      name: '用户管理系统API',
-      description: '提供用户注册、登录、个人信息管理等功能的API接口',
-      groupId: '1',
-      group: {
-        id: '1',
-        name: '前端开发组',
-        description: '负责前端相关项目开发',
-        ownerId: '1',
-        owner: {} as User,
-        members: [],
-        projectCount: 3,
-        createdAt: '2024-01-01',
-        updatedAt: '2024-01-01'
-      },
-      isPublic: true,
-      apiCount: 15,
-      tags: ['用户管理', '认证'],
-      version: 'v1.0.0',
-      status: 'active',
-      createdAt: '2024-01-15',
-      updatedAt: '2024-01-20'
-    },
-    {
-      id: '2',
-      name: '订单系统API',
-      description: '电商平台订单管理相关接口',
-      groupId: '2',
-      group: {
-        id: '2',
-        name: '后端开发组',
-        description: '负责后端服务开发',
-        ownerId: '2',
-        owner: {} as User,
-        members: [],
-        projectCount: 5,
-        createdAt: '2024-01-01',
-        updatedAt: '2024-01-01'
-      },
-      isPublic: true,
-      apiCount: 28,
-      tags: ['订单', '支付'],
-      version: 'v2.1.0',
-      status: 'active',
-      createdAt: '2024-02-01',
-      updatedAt: '2024-02-15'
-    }
-  ];
-
-  // 模拟群组数据
-  const userGroups = [
-    {
-      id: '1',
-      name: '前端开发组',
-      description: '负责前端相关项目开发',
-      ownerId: user.id,
-      owner: user,
-      members: [],
-      projectCount: 3,
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01'
-    }
-  ];
+  // 使用真实的API数据
+  const { data: projects, loading: projectsLoading, error: projectsError } = useProjectData(user);
+  const { data: userGroups, loading: groupsLoading, error: groupsError } = useGroupData(user);
+  const { data: userStats, loading: statsLoading } = useUserStats(user.id);
+  
+  // 综合加载状态
+  const loading = projectsLoading || groupsLoading || statsLoading;
   
   // 获取用户拥有的群组
-  const ownedGroups = permissions.getOwnedGroups(userGroups);
+  const ownedGroups = userGroups ? permissions.getOwnedGroups(userGroups) : [];
   
   // 表格列配置
   const columns = getProjectColumns(user, (id) => navigate(`/projects/${id}`));
 
   // 统计数据
-  const projectStats = getProjectStats(projects);
+  const projectStats = projects ? getProjectStats(projects) : { 
+    totalProjects: 0, 
+    totalApis: 0, 
+    activeProjects: 0 
+  };
+  
   const statisticsData = [
     {
       title: '总专案数',
-      value: projectStats.totalProjects,
+      value: userStats?.projectCount || projectStats.totalProjects,
       prefix: <ProjectOutlined />,
       color: '#1890ff'
     },
     {
       title: '总接口数',
-      value: projectStats.totalApis,
+      value: userStats?.apiCount || projectStats.totalApis,
       prefix: <ApiOutlined />,
       color: '#52c41a'
     },
@@ -123,7 +69,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ user }) => {
     },
     {
       title: '我的群组',
-      value: userGroups.length,
+      value: userStats?.groupCount || (userGroups?.length || 0),
       prefix: <TeamOutlined />,
       color: '#722ed1'
     }
@@ -138,8 +84,27 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ user }) => {
     navigate('/groups/create');
   };
 
+  // 错误处理
+  if (projectsError || groupsError) {
+    return (
+      <div>
+        <PageHeader
+          title="专案总览"
+          subtitle="查看和管理平台上的所有专案"
+        />
+        <Card>
+          <div style={{ textAlign: 'center', padding: '50px' }}>
+            <p style={{ color: '#ff4d4f' }}>
+              {projectsError || groupsError}
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <LoadingState loading={false} empty={projects.length === 0}>
+    <LoadingState loading={loading} empty={!projects || projects.length === 0}>
       <div>
         <PageHeader
           title="专案总览"
@@ -153,7 +118,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ user }) => {
         <QuickActions
           user={user}
           ownedGroups={ownedGroups}
-          userGroups={userGroups}
+          userGroups={userGroups || []}
           onCreateGroup={handleCreateGroup}
           onCreateProject={handleCreateProject}
         />
@@ -162,7 +127,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ user }) => {
         <Card>
           <Table
             columns={columns}
-            dataSource={projects}
+            dataSource={projects || []}
             rowKey="id"
             pagination={{
               pageSize: 10,
@@ -178,7 +143,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ user }) => {
         {/* 权限说明 */}
         <PermissionInfo
           user={user}
-          userGroups={userGroups}
+          userGroups={userGroups || []}
           ownedGroups={ownedGroups}
         />
       </div>

@@ -29,6 +29,8 @@ import {
   createDeleteAction,
   PermissionChecker
 } from '../../components/common';
+import { useGroupData, useJoinRequestData, useOperations } from '../../components/common/DataService';
+import { groupService } from '../../services/group';
 import CreateGroupModal from '../../components/groups/CreateGroupModal';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -43,165 +45,26 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
   const [searchText, setSearchText] = useState('');
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   const permissions = new PermissionChecker(user);
-
-  // 模拟群组数据
-  const groups: Group[] = [
-    {
-      id: '1',
-      name: '前端开发组',
-      description: '负责前端项目开发和维护',
-      ownerId: user.id,
-      owner: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      },
-      members: [
-        {
-          id: '1',
-          userId: user.id,
-          groupId: '1',
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
-          },
-          role: 'admin',
-          permissions: {
-            canApproveMembers: true,
-            canEditProject: true,
-            canManageMembers: true
-          },
-          joinedAt: '2024-01-01'
-        },
-        {
-          id: '2',
-          userId: '2',
-          groupId: '1',
-          user: {
-            id: '2',
-            username: 'developer1',
-            email: 'dev1@company.com',
-            role: 'user',
-            createdAt: '2024-01-02',
-            updatedAt: '2024-01-02'
-          },
-          role: 'member',
-          permissions: {
-            canApproveMembers: false,
-            canEditProject: false,
-            canManageMembers: false
-          },
-          joinedAt: '2024-01-02'
-        }
-      ],
-      projectCount: 3,
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01'
-    },
-    {
-      id: '2',
-      name: '后端开发组',
-      description: '负责后端 API 开发和数据库设计',
-      ownerId: '3',
-      owner: {
-        id: '3',
-        username: 'backend_leader',
-        email: 'backend@company.com',
-        role: 'user',
-        createdAt: '2024-01-03',
-        updatedAt: '2024-01-03'
-      },
-      members: [
-        {
-          id: '3',
-          userId: '3',
-          groupId: '2',
-          user: {
-            id: '3',
-            username: 'backend_leader',
-            email: 'backend@company.com',
-            role: 'user',
-            createdAt: '2024-01-03',
-            updatedAt: '2024-01-03'
-          },
-          role: 'admin',
-          permissions: {
-            canApproveMembers: true,
-            canEditProject: true,
-            canManageMembers: true
-          },
-          joinedAt: '2024-01-03'
-        },
-        {
-          id: '4',
-          userId: user.id,
-          groupId: '2',
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            role: user.role,
-            createdAt: user.createdAt,
-            updatedAt: user.updatedAt
-          },
-          role: 'member',
-          permissions: {
-            canApproveMembers: false,
-            canEditProject: false,
-            canManageMembers: false
-          },
-          joinedAt: '2024-01-05'
-        }
-      ],
-      projectCount: 2,
-      createdAt: '2024-01-03',
-      updatedAt: '2024-01-03'
-    }
-  ];
-
-  // 模拟加入请求数据
-  const joinRequests: JoinRequest[] = [
-    {
-      id: '1',
-      userId: '4',
-      groupId: '1',
-      user: {
-        id: '4',
-        username: 'new_developer',
-        email: 'newdev@company.com',
-        role: 'user',
-        createdAt: '2024-01-10',
-        updatedAt: '2024-01-10'
-      },
-      group: groups[0],
-      message: '希望加入前端开发组，有3年React开发经验',
-      status: 'pending',
-      createdAt: '2024-01-10'
-    }
-  ];
+  
+  // 使用真实的API数据
+  const { data: groups, loading: groupsLoading, error: groupsError, refetch: refetchGroups } = useGroupData(user);
+  const { data: joinRequests, loading: requestsLoading, error: requestsError, refetch: refetchRequests } = useJoinRequestData();
+  const { loading: operationLoading, executeOperation } = useOperations();
 
   // 过滤群组数据
-  const filteredGroups = groups.filter(group =>
+  const filteredGroups = groups?.filter(group =>
     group.name.toLowerCase().includes(searchText.toLowerCase()) ||
     group.description.toLowerCase().includes(searchText.toLowerCase())
-  );
+  ) || [];
 
   // 根据用户角色过滤群组
   const myGroups = user.role === 'system_admin' ? 
     filteredGroups : 
     filteredGroups.filter(group => 
       group.ownerId === user.id || 
-      group.members.some(member => member.userId === user.id)
+      group.members?.some(member => member.userId === user.id)
     );
 
   // 群组表格列配置
@@ -259,7 +122,7 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
       dataIndex: 'members',
       key: 'memberCount',
       render: (members: GroupMember[]) => (
-        <Badge count={members.length} showZero style={{ backgroundColor: '#52c41a' }} />
+        <Badge count={members?.length || 0} showZero style={{ backgroundColor: '#52c41a' }} />
       ),
     },
     {
@@ -267,7 +130,7 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
       dataIndex: 'projectCount',
       key: 'projectCount',
       render: (count: number) => (
-        <Badge count={count} showZero style={{ backgroundColor: '#1890ff' }} />
+        <Badge count={count || 0} showZero style={{ backgroundColor: '#1890ff' }} />
       ),
     },
     {
@@ -303,7 +166,7 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
         // 删除权限
         if (permissions.canDeleteGroup(record)) {
           actions.push(
-            createDeleteAction(() => handleDeleteGroup(), record.name)
+            createDeleteAction(() => handleDeleteGroup(record), record.name)
           );
         }
 
@@ -377,42 +240,93 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
   const handleCreateGroup = async () => {
     setCreateModalVisible(false);
     message.success('群组创建成功');
+    await refetchGroups();
   };
 
   // 处理群组编辑
   const handleEditGroup = async (values: any) => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      message.success('群组更新成功');
-      setEditModalVisible(false);
-      setSelectedGroup(null);
-    } catch (error) {
-      message.error('更新群组失败');
-    } finally {
-      setLoading(false);
-    }
+    if (!selectedGroup) return;
+
+    await executeOperation(
+      async () => {
+        const response = await groupService.updateGroup(selectedGroup.id, {
+          name: values.name,
+          description: values.description
+        });
+
+        if (!response.success) {
+          throw new Error(response.message || '更新群组失败');
+        }
+
+        setEditModalVisible(false);
+        setSelectedGroup(null);
+        await refetchGroups();
+      },
+      '群组更新成功',
+      '更新群组失败'
+    );
   };
 
   // 处理群组删除
-  const handleDeleteGroup = async () => {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      message.success('群组删除成功');
-    } catch (error) {
-      message.error('删除群组失败');
-    }
+  const handleDeleteGroup = async (group: Group) => {
+    await executeOperation(
+      async () => {
+        const response = await groupService.deleteGroup(group.id);
+
+        if (!response.success) {
+          throw new Error(response.message || '删除群组失败');
+        }
+
+        await refetchGroups();
+      },
+      '群组删除成功',
+      '删除群组失败'
+    );
   };
 
   // 处理申请审批
   const handleApproveRequest = async (requestId: string, approved: boolean) => {
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      message.success(approved ? '申请已批准' : '申请已拒绝');
-    } catch (error) {
-      message.error('处理申请失败');
-    }
+    await executeOperation(
+      async () => {
+        const response = await groupService.handleJoinRequest(requestId, {
+          action: approved ? 'approve' : 'reject',
+          reviewMessage: approved ? '申请已通过' : '申请被拒绝'
+        });
+
+        if (!response.success) {
+          throw new Error(response.message || '处理申请失败');
+        }
+
+        await refetchRequests();
+        if (approved) {
+          await refetchGroups(); // 如果通过申请，需要刷新群组数据以更新成员数量
+        }
+      },
+      approved ? '申请已批准' : '申请已拒绝',
+      '处理申请失败'
+    );
   };
+
+  // 错误处理
+  if (groupsError || requestsError) {
+    return (
+      <div>
+        <PageHeader
+          title="群组管理"
+          subtitle="管理和组织您的开发团队"
+        />
+        <Card>
+          <div style={{ textAlign: 'center', padding: '50px' }}>
+            <p style={{ color: '#ff4d4f' }}>
+              {groupsError || requestsError}
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  const pendingRequestsCount = joinRequests?.filter(req => req.status === 'pending').length || 0;
 
   const tabItems = [
     {
@@ -438,7 +352,7 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
             columns={groupColumns}
             dataSource={myGroups}
             rowKey="id"
-            loading={false}
+            loading={groupsLoading}
             pagination={{
               pageSize: 10,
               showSizeChanger: true,
@@ -455,9 +369,9 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
         <span>
           <UserAddOutlined />
           入组申请
-          {joinRequests.filter(req => req.status === 'pending').length > 0 && (
+          {pendingRequestsCount > 0 && (
             <Badge 
-              count={joinRequests.filter(req => req.status === 'pending').length} 
+              count={pendingRequestsCount} 
               style={{ marginLeft: 8 }} 
             />
           )}
@@ -466,8 +380,9 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
       children: (
         <Table
           columns={requestColumns}
-          dataSource={joinRequests}
+          dataSource={joinRequests || []}
           rowKey="id"
+          loading={requestsLoading}
           pagination={{
             pageSize: 10,
             showTotal: (total, range) => 
@@ -479,7 +394,7 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
   ];
 
   return (
-    <LoadingState loading={false} empty={groups.length === 0}>
+    <LoadingState loading={groupsLoading && requestsLoading} empty={!groups || groups.length === 0}>
       <div>
         <PageHeader
           title="群组管理"
@@ -514,7 +429,7 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
           fields={groupFormFields}
           initialValues={selectedGroup}
           okText="更新"
-          loading={loading}
+          loading={operationLoading}
         />
       </div>
     </LoadingState>

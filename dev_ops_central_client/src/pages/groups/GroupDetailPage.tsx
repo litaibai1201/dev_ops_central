@@ -33,6 +33,7 @@ import {
   PermissionChecker
 } from '../../components/common';
 import { usePageContext } from '../../components/common/PageContext';
+import { useGroupDetail } from '../../components/common/DataService';
 import type { ColumnsType } from 'antd/es/table';
 
 interface GroupDetailPageProps {
@@ -43,10 +44,10 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const { setGroupName } = usePageContext();
-  const [loading, setLoading] = useState(true);
-  const [group, setGroup] = useState<Group | null>(null);
-  const [projects, setProjects] = useState<Project[]>([]);
-
+  
+  // 使用真实的API数据
+  const { data, loading, error } = useGroupDetail(groupId!);
+  
   const permissions = new PermissionChecker(user);
 
   // 组件卸载时清理上下文
@@ -56,124 +57,38 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
     };
   }, [setGroupName]);
 
-  // 模拟数据获取
+  // 设置群组名称到上下文
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // 模拟群组数据
-        const mockGroup: Group = {
-          id: groupId!,
-          name: '前端开发组',
-          description: '负责前端项目开发和维护，使用React、Vue等现代前端技术栈',
-          ownerId: user.username === 'groupuser' ? user.id : '1',
-          owner: {
-            id: user.username === 'groupuser' ? user.id : '1',
-            username: user.username === 'groupuser' ? user.username : 'group_owner',
-            email: 'owner@company.com',
-            role: 'user',
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-01'
-          },
-          members: [
-            {
-              id: '1',
-              userId: user.username === 'groupuser' ? user.id : '1',
-              groupId: groupId!,
-              user: {
-                id: user.username === 'groupuser' ? user.id : '1',
-                username: user.username === 'groupuser' ? user.username : 'group_owner',
-                email: 'owner@company.com',
-                role: 'user',
-                createdAt: '2024-01-01',
-                updatedAt: '2024-01-01'
-              },
-              role: 'admin',
-              permissions: {
-                canApproveMembers: true,
-                canEditProject: true,
-                canManageMembers: true
-              },
-              joinedAt: '2024-01-01'
-            },
-            {
-              id: '2',
-              userId: '2',
-              groupId: groupId!,
-              user: {
-                id: '2',
-                username: 'alice',
-                email: 'alice@company.com',
-                role: 'user',
-                createdAt: '2024-01-02',
-                updatedAt: '2024-01-02'
-              },
-              role: 'member',
-              permissions: {
-                canApproveMembers: false,
-                canEditProject: false,
-                canManageMembers: false
-              },
-              joinedAt: '2024-01-02'
-            }
-          ],
-          projectCount: 2,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        };
-
-        // 模拟项目数据
-        const mockProjects: Project[] = [
-          {
-            id: '1',
-            name: '用户管理系统',
-            description: '企业级用户管理系统前端',
-            groupId: groupId!,
-            group: mockGroup,
-            isPublic: true,
-            apiCount: 15,
-            tags: ['React', '用户管理'],
-            version: 'v1.0.0',
-            status: 'active',
-            createdAt: '2024-01-15',
-            updatedAt: '2024-01-20'
-          },
-          {
-            id: '2',
-            name: '数据可视化平台',
-            description: '实时数据展示和分析平台',
-            groupId: groupId!,
-            group: mockGroup,
-            isPublic: false,
-            apiCount: 28,
-            tags: ['Vue', '数据可视化'],
-            version: 'v2.1.0',
-            status: 'active',
-            createdAt: '2024-02-01',
-            updatedAt: '2024-02-15'
-          }
-        ];
-
-        setGroup(mockGroup);
-        setProjects(mockProjects);
-        setGroupName(mockGroup.name);
-      } catch (error) {
-        message.error('获取群组详情失败');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (groupId) {
-      fetchData();
+    if (data?.group) {
+      setGroupName(data.group.name);
     }
-  }, [groupId, user, setGroupName]);
+  }, [data?.group, setGroupName]);
 
-  if (!group) {
+  // 错误处理
+  if (error) {
+    return (
+      <div>
+        <Button 
+          icon={<ArrowLeftOutlined />} 
+          onClick={() => navigate('/groups')}
+          style={{ marginBottom: 16 }}
+        >
+          返回
+        </Button>
+        <Card>
+          <div style={{ textAlign: 'center', padding: '50px' }}>
+            <p style={{ color: '#ff4d4f' }}>{error}</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading || !data) {
     return <LoadingState loading={loading} />;
   }
+
+  const { group, projects } = data;
 
   // 日期格式化工具
   const formatDate = (dateString: string) => {
@@ -327,7 +242,7 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
                 <Card>
                   <Statistic
                     title="成员数量"
-                    value={group.members.length}
+                    value={group.members?.length || 0}
                     prefix={<UserOutlined />}
                     valueStyle={{ color: '#3f8600' }}
                   />
@@ -337,7 +252,7 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
                 <Card>
                   <Statistic
                     title="专案数量"
-                    value={group.projectCount}
+                    value={projects?.length || 0}
                     prefix={<ProjectOutlined />}
                     valueStyle={{ color: '#1890ff' }}
                   />
@@ -353,13 +268,13 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
       label: (
         <span>
           <UserOutlined />
-          成员管理 ({group.members.length})
+          成员管理 ({group.members?.length || 0})
         </span>
       ),
       children: (
         <Table
           columns={memberColumns}
-          dataSource={group.members}
+          dataSource={group.members || []}
           rowKey="id"
           pagination={{
             pageSize: 10,
@@ -374,13 +289,13 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
       label: (
         <span>
           <ProjectOutlined />
-          专案列表 ({projects.length})
+          专案列表 ({projects?.length || 0})
         </span>
       ),
       children: (
         <Table
           columns={projectColumns}
-          dataSource={projects}
+          dataSource={projects || []}
           rowKey="id"
           pagination={{
             pageSize: 10,
@@ -440,8 +355,8 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
               {group.name}
             </h1>
             <Space>
-              <Tag color="blue">{group.members.length} 名成员</Tag>
-              <Tag color="green">{group.projectCount} 个专案</Tag>
+              <Tag color="blue">{group.members?.length || 0} 名成员</Tag>
+              <Tag color="green">{projects?.length || 0} 个专案</Tag>
               {isOwner && <Tag color="gold" icon={<CrownOutlined />}>群主</Tag>}
               {isGroupAdmin && !isOwner && <Tag color="blue">管理员</Tag>}
             </Space>

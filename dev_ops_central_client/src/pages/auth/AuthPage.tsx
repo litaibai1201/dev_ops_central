@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, message, Tabs, Checkbox, Form, Button } from 'antd';
 import { LoginForm, RegisterForm } from '../../types';
 import { AuthForm, loginFormFields, registerFormFields } from '../../components/common';
+import { authService } from '../../services/auth';
 
 interface AuthPageProps {
   onLogin: (userData: any) => void;
@@ -14,24 +15,24 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const handleLogin = async (values: LoginForm) => {
     setLoading(true);
     try {
-      // 模拟登录API调用
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await authService.login(values);
       
-      // 模拟用户数据
-      const userData = {
-        id: values.username === 'groupuser' ? '10' : '1',
-        username: values.username,
-        email: 'user@example.com',
-        role: values.username === 'admin' ? 'system_admin' : 'user',
-        avatar: '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      onLogin(userData);
-      message.success('登录成功！');
-    } catch (error) {
-      message.error('登录失败，请检查用户名和密码');
+      if (response.success) {
+        // 保存用户信息和token到localStorage
+        const userWithToken = {
+          ...response.data.user,
+          token: response.data.token
+        };
+        localStorage.setItem('user', JSON.stringify(userWithToken));
+        
+        onLogin(userWithToken);
+        message.success('登录成功！');
+      } else {
+        throw new Error(response.message || '登录失败');
+      }
+    } catch (error: any) {
+      console.error('登录失败:', error);
+      message.error(error.message || '登录失败，请检查用户名和密码');
     } finally {
       setLoading(false);
     }
@@ -40,13 +41,17 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   const handleRegister = async (values: RegisterForm) => {
     setLoading(true);
     try {
-      // 模拟注册API调用
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await authService.register(values);
       
-      message.success('注册成功！请登录');
-      setActiveTab('login');
-    } catch (error) {
-      message.error('注册失败，请重试');
+      if (response.success) {
+        message.success('注册成功！请登录');
+        setActiveTab('login');
+      } else {
+        throw new Error(response.message || '注册失败');
+      }
+    } catch (error: any) {
+      console.error('注册失败:', error);
+      message.error(error.message || '注册失败，请重试');
     } finally {
       setLoading(false);
     }
@@ -246,9 +251,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
           color: '#666',
           lineHeight: '1.4'
         }}>
-          <p style={{ margin: '4px 0' }}>测试账号：</p>
-          <p style={{ margin: '4px 0' }}>管理员: admin / 群主: groupuser / 普通用户: user</p>
-          <p style={{ margin: '4px 0' }}>密码随意</p>
+          <p style={{ margin: '4px 0' }}>使用您的账号登录系统</p>
+          <p style={{ margin: '4px 0' }}>如需帮助，请联系系统管理员</p>
         </div>
       </Card>
     </div>

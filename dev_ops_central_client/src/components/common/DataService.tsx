@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { message } from 'antd';
-import { Group, Project, User, JoinRequest, GroupMember } from '../../types';
+import { Group, Project, User, JoinRequest } from '../../types';
 import { groupService } from '../../services/group';
+import { projectService } from '../../services/project';
+import { userService } from '../../services/user';
 
 // 通用数据服务Hook
 export const useDataService = <T,>(
@@ -17,10 +19,11 @@ export const useDataService = <T,>(
     try {
       const result = await fetchFunction();
       setData(result);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '获取数据失败';
+    } catch (err: any) {
+      const errorMessage = err?.message || '获取数据失败';
       setError(errorMessage);
       console.error('数据获取失败:', err);
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -36,83 +39,21 @@ export const useDataService = <T,>(
 // 项目数据服务
 export const useProjectData = (user: User) => {
   const fetchProjects = useCallback(async (): Promise<Project[]> => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return [
-      {
-        id: '1',
-        name: '用户管理系统API',
-        description: '提供用户注册、登录、个人信息管理等功能的API接口',
-        groupId: '1',
-        group: {
-          id: '1',
-          name: '前端开发组',
-          description: '负责前端相关项目开发',
-          ownerId: '1',
-          owner: {} as User,
-          members: [],
-          projectCount: 3,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        },
-        isPublic: true,
-        apiCount: 15,
-        tags: ['用户管理', '认证'],
-        version: 'v1.0.0',
-        status: 'active',
-        createdAt: '2024-01-15',
-        updatedAt: '2024-01-20'
-      },
-      {
-        id: '2',
-        name: '订单系统API',
-        description: '电商平台订单管理相关接口',
-        groupId: '2',
-        group: {
-          id: '2',
-          name: '后端开发组',
-          description: '负责后端服务开发',
-          ownerId: '2',
-          owner: {} as User,
-          members: [],
-          projectCount: 5,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        },
-        isPublic: true,
-        apiCount: 28,
-        tags: ['订单', '支付'],
-        version: 'v2.1.0',
-        status: 'active',
-        createdAt: '2024-02-01',
-        updatedAt: '2024-02-15'
-      },
-      {
-        id: '3',
-        name: '内部工具API',
-        description: '公司内部使用的工具类接口',
-        groupId: '1',
-        group: {
-          id: '1',
-          name: '前端开发组',
-          description: '负责前端相关项目开发',
-          ownerId: '1',
-          owner: {} as User,
-          members: [],
-          projectCount: 3,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        },
-        isPublic: false,
-        apiCount: 8,
-        tags: ['内部工具'],
-        version: 'v1.2.0',
-        status: 'active',
-        createdAt: '2024-03-01',
-        updatedAt: '2024-03-10'
+    try {
+      const response = await projectService.getProjects({
+        page: 1,
+        pageSize: 100 // 获取所有项目
+      });
+      
+      if (response.success) {
+        return response.data.data;
       }
-    ];
-  }, [user]);
+      throw new Error(response.message || '获取项目列表失败');
+    } catch (error: any) {
+      console.error('获取项目列表失败:', error);
+      throw new Error(error.message || '获取项目列表失败');
+    }
+  }, []);
 
   return useDataService(fetchProjects);
 };
@@ -125,199 +66,188 @@ export const useGroupData = (user: User) => {
       if (response.success) {
         return response.data;
       }
-      throw new Error('获取群组失败');
-    } catch (error) {
-      // 使用模拟数据作为后备
-      const mockGroups: Group[] = [];
-      
-      if (user.username === 'groupuser') {
-        mockGroups.push({
-          id: '10',
-          name: '测试开发组',
-          description: '用于测试创建专案功能的群组',
-          ownerId: user.id,
-          owner: user,
-          members: [],
-          projectCount: 0,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        });
-      } else {
-        mockGroups.push(
-          {
-            id: '1',
-            name: '前端开发组',
-            description: '负责前端相关项目开发',
-            ownerId: user.username === 'user' ? user.id : 'other-user-id',
-            owner: user.username === 'user' ? user : {} as User,
-            members: [],
-            projectCount: 3,
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-01'
-          },
-          {
-            id: '2',
-            name: '后端开发组',
-            description: '负责后端服务开发',
-            ownerId: 'other-user-id',
-            owner: {} as User,
-            members: [],
-            projectCount: 5,
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-01'
-          }
-        );
-      }
-      
-      return mockGroups;
+      throw new Error(response.message || '获取群组列表失败');
+    } catch (error: any) {
+      console.error('获取群组列表失败:', error);
+      throw new Error(error.message || '获取群组列表失败');
     }
-  }, [user]);
+  }, [user.id]);
 
   return useDataService(fetchGroups);
 };
 
+// 所有群组数据服务（用于浏览群组页面）
+export const useAllGroupData = () => {
+  const fetchAllGroups = useCallback(async (): Promise<Group[]> => {
+    try {
+      const response = await groupService.getGroups({
+        page: 1,
+        pageSize: 100 // 获取所有群组
+      });
+      
+      if (response.success) {
+        return response.data.data;
+      }
+      throw new Error(response.message || '获取群组列表失败');
+    } catch (error: any) {
+      console.error('获取群组列表失败:', error);
+      throw new Error(error.message || '获取群组列表失败');
+    }
+  }, []);
+
+  return useDataService(fetchAllGroups);
+};
+
 // 群组详情数据服务
-export const useGroupDetail = (groupId: string, user: User) => {
+export const useGroupDetail = (groupId: string) => {
   const fetchGroupDetail = useCallback(async (): Promise<{
     group: Group;
     projects: Project[];
   }> => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const mockGroup: Group = {
-      id: groupId,
-      name: '前端开发组',
-      description: '负责前端项目开发和维护，使用React、Vue等现代前端技术栈',
-      ownerId: user.username === 'groupuser' ? user.id : '1',
-      owner: {
-        id: user.username === 'groupuser' ? user.id : '1',
-        username: user.username === 'groupuser' ? user.username : 'group_owner',
-        email: 'owner@company.com',
-        role: 'user',
-        createdAt: '2024-01-01',
-        updatedAt: '2024-01-01'
-      },
-      members: [
-        {
-          id: '1',
-          userId: user.username === 'groupuser' ? user.id : '1',
-          groupId: groupId,
-          user: {
-            id: user.username === 'groupuser' ? user.id : '1',
-            username: user.username === 'groupuser' ? user.username : 'group_owner',
-            email: 'owner@company.com',
-            role: 'user',
-            createdAt: '2024-01-01',
-            updatedAt: '2024-01-01'
-          },
-          role: 'admin',
-          permissions: {
-            canApproveMembers: true,
-            canEditProject: true,
-            canManageMembers: true
-          },
-          joinedAt: '2024-01-01'
-        },
-        {
-          id: '2',
-          userId: '2',
-          groupId: groupId,
-          user: {
-            id: '2',
-            username: 'alice',
-            email: 'alice@company.com',
-            role: 'user',
-            createdAt: '2024-01-02',
-            updatedAt: '2024-01-02'
-          },
-          role: 'member',
-          permissions: {
-            canApproveMembers: false,
-            canEditProject: false,
-            canManageMembers: false
-          },
-          joinedAt: '2024-01-02'
-        }
-      ],
-      projectCount: 2,
-      createdAt: '2024-01-01',
-      updatedAt: '2024-01-01'
-    };
+    try {
+      // 并行获取群组详情和项目列表
+      const [groupResponse, projectsResponse] = await Promise.all([
+        groupService.getGroup(groupId),
+        projectService.getProjects({ 
+          groupId, 
+          page: 1, 
+          pageSize: 100 
+        })
+      ]);
 
-    const mockProjects: Project[] = [
-      {
-        id: '1',
-        name: '用户管理系统',
-        description: '企业级用户管理系统前端',
-        groupId: groupId,
-        group: mockGroup,
-        isPublic: true,
-        apiCount: 15,
-        tags: ['React', '用户管理'],
-        version: 'v1.0.0',
-        status: 'active',
-        createdAt: '2024-01-15',
-        updatedAt: '2024-01-20'
-      },
-      {
-        id: '2',
-        name: '数据可视化平台',
-        description: '实时数据展示和分析平台',
-        groupId: groupId,
-        group: mockGroup,
-        isPublic: false,
-        apiCount: 28,
-        tags: ['Vue', '数据可视化'],
-        version: 'v2.1.0',
-        status: 'active',
-        createdAt: '2024-02-01',
-        updatedAt: '2024-02-15'
+      if (!groupResponse.success) {
+        throw new Error(groupResponse.message || '获取群组详情失败');
       }
-    ];
 
-    return { group: mockGroup, projects: mockProjects };
-  }, [groupId, user]);
+      if (!projectsResponse.success) {
+        throw new Error(projectsResponse.message || '获取项目列表失败');
+      }
+
+      return {
+        group: groupResponse.data,
+        projects: projectsResponse.data.data
+      };
+    } catch (error: any) {
+      console.error('获取群组详情失败:', error);
+      throw new Error(error.message || '获取群组详情失败');
+    }
+  }, [groupId]);
 
   return useDataService(fetchGroupDetail);
 };
 
 // 加入请求数据服务
-export const useJoinRequestData = () => {
+export const useJoinRequestData = (groupId?: string) => {
   const fetchJoinRequests = useCallback(async (): Promise<JoinRequest[]> => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return [
-      {
-        id: '1',
-        userId: '4',
-        groupId: '1',
-        user: {
-          id: '4',
-          username: 'new_developer',
-          email: 'newdev@company.com',
-          role: 'user',
-          createdAt: '2024-01-10',
-          updatedAt: '2024-01-10'
-        },
-        group: {
-          id: '1',
-          name: '前端开发组',
-          description: '负责前端相关项目开发',
-          ownerId: '1',
-          owner: {} as User,
-          members: [],
-          projectCount: 3,
-          createdAt: '2024-01-01',
-          updatedAt: '2024-01-01'
-        },
-        message: '希望加入前端开发组，有3年React开发经验',
-        status: 'pending',
-        createdAt: '2024-01-10'
+    try {
+      const params = groupId ? { groupId } : {};
+      const response = await groupService.getJoinRequests(params);
+      
+      if (response.success) {
+        return response.data;
       }
-    ];
-  }, []);
+      throw new Error(response.message || '获取加入申请失败');
+    } catch (error: any) {
+      console.error('获取加入申请失败:', error);
+      throw new Error(error.message || '获取加入申请失败');
+    }
+  }, [groupId]);
 
   return useDataService(fetchJoinRequests);
+};
+
+// 用户统计数据服务
+export const useUserStats = (userId: string) => {
+  const fetchUserStats = useCallback(async () => {
+    try {
+      const response = await userService.getUserStats(userId);
+      
+      if (response.success) {
+        return response.data;
+      }
+      throw new Error(response.message || '获取用户统计失败');
+    } catch (error: any) {
+      console.error('获取用户统计失败:', error);
+      throw new Error(error.message || '获取用户统计失败');
+    }
+  }, [userId]);
+
+  return useDataService(fetchUserStats);
+};
+
+// 群组统计数据服务
+export const useGroupStats = (groupId: string) => {
+  const fetchGroupStats = useCallback(async () => {
+    try {
+      const response = await groupService.getGroupStats(groupId);
+      
+      if (response.success) {
+        return response.data;
+      }
+      throw new Error(response.message || '获取群组统计失败');
+    } catch (error: any) {
+      console.error('获取群组统计失败:', error);
+      throw new Error(error.message || '获取群组统计失败');
+    }
+  }, [groupId]);
+
+  return useDataService(fetchGroupStats);
+};
+
+// 可添加到群组的用户数据服务
+export const useAvailableUsers = (excludeGroupId?: string) => {
+  const fetchAvailableUsers = useCallback(async (): Promise<User[]> => {
+    try {
+      const response = await groupService.getAvailableUsers({ 
+        excludeGroupId 
+      });
+      
+      if (response.success) {
+        return response.data;
+      }
+      throw new Error(response.message || '获取可用用户列表失败');
+    } catch (error: any) {
+      console.error('获取可用用户列表失败:', error);
+      throw new Error(error.message || '获取可用用户列表失败');
+    }
+  }, [excludeGroupId]);
+
+  return useDataService(fetchAvailableUsers);
+};
+
+// 用户搜索服务
+export const useUserSearch = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const searchUsers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setUsers([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await userService.searchUsers(query);
+      
+      if (response.success) {
+        setUsers(response.data);
+      } else {
+        throw new Error(response.message || '搜索用户失败');
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || '搜索用户失败';
+      setError(errorMessage);
+      console.error('搜索用户失败:', error);
+      message.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { users, loading, error, searchUsers };
 };
 
 // 操作处理Hook
@@ -333,8 +263,9 @@ export const useOperations = () => {
     try {
       await operation();
       message.success(successMessage);
-    } catch (error) {
-      message.error(errorMessage);
+    } catch (error: any) {
+      const msg = error?.message || errorMessage;
+      message.error(msg);
       throw error;
     } finally {
       setLoading(false);

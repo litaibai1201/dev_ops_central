@@ -3,7 +3,7 @@ import { ApiResponseData } from '../types';
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api',
   timeout: 10000,
 });
 

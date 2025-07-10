@@ -315,8 +315,8 @@ def main():
         print(f"\n应用启动成功！")
         print(f"配置环境: {config_name}")
         print(f"数据库: {app.config['SQLALCHEMY_DATABASE_URI']}")
-        print(f"API文档: http://localhost:5000/docs")
-        print(f"健康检查: http://localhost:5000/api/health")
+        print(f"API文档: http://localhost:5001/docs")
+        print(f"健康检查: http://localhost:5001/api/health")
     
     return app
 
