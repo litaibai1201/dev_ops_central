@@ -38,7 +38,7 @@ class User(db.Model):
     email = Column(String(120), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)  # 增加长度以支持bcrypt
     role = Column(String(20), default='user', index=True)  # user, system_admin
-    avatar = Column(String(500))  # 增加长度以支持长URL
+    avatar = Column(String(255))  # 增加长度以支持长URL
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     
@@ -140,7 +140,7 @@ class ApiMethod(db.Model):
     name = Column(String(100), nullable=False)
     description = Column(Text)
     method = Column(String(10), nullable=False, index=True)  # GET, POST, PUT, DELETE, PATCH
-    url = Column(String(1000), nullable=False)  # 增加长度以支持长URL
+    url = Column(String(500), nullable=False)  # 增加长度以支持长URL
     project_id = Column(String(36), ForeignKey('projects.id'), nullable=False, index=True)
     folder_id = Column(String(36), ForeignKey('api_folders.id'), index=True)
     headers = Column(JSON)  # Key-value pairs
@@ -159,7 +159,7 @@ class ApiMethod(db.Model):
         return f'<ApiMethod {self.method} {self.name}>'
 
 # 为ApiMethod创建复合索引
-Index('idx_api_methods_method_url', ApiMethod.method, ApiMethod.url)
+# Index('idx_api_methods_method_url', ApiMethod.method, ApiMethod.url)  # 已注释，索引过长
 
 class Environment(db.Model):
     __tablename__ = 'environments'
@@ -172,7 +172,7 @@ class Environment(db.Model):
     description = Column(Text)
     project_id = Column(String(36), ForeignKey('projects.id'), nullable=False, index=True)
     variables = Column(JSON)  # Key-value pairs
-    base_url = Column(String(1000))  # 增加长度
+    base_url = Column(String(500))  # 增加长度
     headers = Column(JSON)  # Key-value pairs
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     

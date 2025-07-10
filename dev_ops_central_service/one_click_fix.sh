@@ -185,6 +185,17 @@ check_mysql_service() {
     fi
 }
 
+# 修复数据库问题
+fix_database_issues() {
+    print_status "修复数据库问题..."
+    
+    if python scripts/fix_db_init.py; then
+        print_success "数据库问题修复完成"
+    else
+        print_warning "数据库修复脚本失败，将尝试其他方法"
+    fi
+}
+
 # 初始化数据库
 init_database() {
     print_status "初始化MySQL数据库..."
@@ -204,21 +215,29 @@ init_database() {
     elif python scripts/init_db.py; then
         print_success "数据库表初始化完成 (使用init_db.py)"
     else
-        print_status "尝试使用Flask-Migrate..."
-        export FLASK_APP=app.py
+        print_status "检测到数据库初始化问题，开始修复..."
+        fix_database_issues
         
-        if [ ! -d "migrations" ]; then
-            flask db init
-        fi
-        
-        flask db migrate -m "Initial migration" 2>/dev/null || true
-        flask db upgrade
-        
-        if [ $? -eq 0 ]; then
-            print_success "数据库表初始化完成 (使用Flask-Migrate)"
+        # 修复后再次尝试
+        if python scripts/init_db.py; then
+            print_success "数据库表初始化完成 (修复后)"
         else
-            print_error "所有数据库初始化方法都失败了"
-            exit 1
+            print_status "尝试使用Flask-Migrate..."
+            export FLASK_APP=app.py
+            
+            if [ ! -d "migrations" ]; then
+                flask db init
+            fi
+            
+            flask db migrate -m "Initial migration" 2>/dev/null || true
+            flask db upgrade
+            
+            if [ $? -eq 0 ]; then
+                print_success "数据库表初始化完成 (使用Flask-Migrate)"
+            else
+                print_error "所有数据库初始化方法都失败了"
+                exit 1
+            fi
         fi
     fi
 }
