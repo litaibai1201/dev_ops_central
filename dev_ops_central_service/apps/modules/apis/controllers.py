@@ -26,7 +26,7 @@ class ApiController:
         # 获取API列表
         apis = ApiModel.get_project_apis(project_id, search, method, folder_id).all()
         
-        from apps.schemas import ApiMethodSchema
+        from apps.schemas.models_schema import ApiMethodSchema
         api_schema = ApiMethodSchema(many=True)
         apis_data = api_schema.dump(apis)
         
@@ -77,7 +77,7 @@ class ApiController:
             # 重新查询以获取完整数据
             api_method = ApiModel.get_api_with_relations(api_method.id)
             
-            from apps.schemas import ApiMethodSchema
+            from apps.schemas.models_schema import ApiMethodSchema
             api_schema = ApiMethodSchema()
             api_data = api_schema.dump(api_method)
             
@@ -98,7 +98,7 @@ class ApiController:
         if not api_method or api_method.project_id != project_id:
             return not_found_response('API')
         
-        from apps.schemas import ApiMethodSchema
+        from apps.schemas.models_schema import ApiMethodSchema
         api_schema = ApiMethodSchema()
         api_data = api_schema.dump(api_method)
         
@@ -137,7 +137,7 @@ class ApiController:
             ApiModel.update_api(api_method, api_data)
             db.session.commit()
             
-            from apps.schemas import ApiMethodSchema
+            from apps.schemas.models_schema import ApiMethodSchema
             api_schema = ApiMethodSchema()
             api_data = api_schema.dump(api_method)
             
@@ -237,7 +237,7 @@ class ApiController:
             db.session.add(api_copy)
             db.session.commit()
             
-            from apps.schemas import ApiMethodSchema
+            from apps.schemas.models_schema import ApiMethodSchema
             api_schema = ApiMethodSchema()
             api_data = api_schema.dump(api_copy)
             
@@ -272,7 +272,7 @@ class ApiController:
             updated_apis = ApiModel.bulk_update_apis(api_ids, update_data)
             db.session.commit()
             
-            from apps.schemas import ApiMethodSchema
+            from apps.schemas.models_schema import ApiMethodSchema
             api_schema = ApiMethodSchema(many=True)
             apis_data = api_schema.dump(updated_apis)
             
@@ -306,7 +306,7 @@ class ApiController:
             current_user.id, search_query, filters
         ).limit(50).all()
         
-        from apps.schemas import ApiMethodSchema
+        from apps.schemas.models_schema import ApiMethodSchema
         api_schema = ApiMethodSchema(many=True)
         apis_data = api_schema.dump(apis)
         

@@ -99,7 +99,7 @@ class GroupModel:
         for member in members_query:
             user = User.query.get(member.user_id)
             if user:
-                from apps.schemas import UserSchema
+                from apps.schemas.models_schema import UserSchema
                 member_data = {
                     'id': member.id,
                     'user_id': member.user_id,

@@ -34,7 +34,7 @@ class ProjectController:
         result = paginate_query(query, page, page_size)
         
         # 序列化数据
-        from apps.schemas import ProjectSchema
+        from apps.schemas.models_schema import ProjectSchema
         project_schema = ProjectSchema(many=True)
         result['data'] = project_schema.dump(result['data'])
         
@@ -76,7 +76,7 @@ class ProjectController:
             # 重新查询以获取完整数据
             project = ProjectModel.get_project_with_relations(project.id)
             
-            from apps.schemas import ProjectSchema
+            from apps.schemas.models_schema import ProjectSchema
             project_schema = ProjectSchema()
             project_data = project_schema.dump(project)
             
@@ -97,7 +97,7 @@ class ProjectController:
         if not project:
             return not_found_response('专案')
         
-        from apps.schemas import ProjectSchema
+        from apps.schemas.models_schema import ProjectSchema
         project_schema = ProjectSchema()
         project_data = project_schema.dump(project)
         
@@ -126,7 +126,7 @@ class ProjectController:
             ProjectModel.update_project(project, project_data)
             db.session.commit()
             
-            from apps.schemas import ProjectSchema
+            from apps.schemas.models_schema import ProjectSchema
             project_schema = ProjectSchema()
             project_data = project_schema.dump(project)
             
@@ -168,7 +168,7 @@ class ProjectController:
         # 获取根级文件夹
         folders = ProjectModel.get_project_folders(project_id)
         
-        from apps.schemas import ApiFolderSchema
+        from apps.schemas.models_schema import ApiFolderSchema
         folder_schema = ApiFolderSchema(many=True)
         folders_data = folder_schema.dump(folders)
         
@@ -205,7 +205,7 @@ class ProjectController:
             db.session.add(folder)
             db.session.commit()
             
-            from apps.schemas import ApiFolderSchema
+            from apps.schemas.models_schema import ApiFolderSchema
             folder_schema = ApiFolderSchema()
             folder_data = folder_schema.dump(folder)
             
@@ -223,7 +223,7 @@ class ProjectController:
         
         environments = ProjectModel.get_project_environments(project_id)
         
-        from apps.schemas import EnvironmentSchema
+        from apps.schemas.models_schema import EnvironmentSchema
         env_schema = EnvironmentSchema(many=True)
         envs_data = env_schema.dump(environments)
         
@@ -259,7 +259,7 @@ class ProjectController:
             db.session.add(environment)
             db.session.commit()
             
-            from apps.schemas import EnvironmentSchema
+            from apps.schemas.models_schema import EnvironmentSchema
             env_schema = EnvironmentSchema()
             env_data = env_schema.dump(environment)
             
@@ -279,7 +279,7 @@ class ProjectController:
         
         test_cases = ProjectModel.get_project_test_cases(project_id, api_id)
         
-        from apps.schemas import TestCaseSchema
+        from apps.schemas.models_schema import TestCaseSchema
         test_case_schema = TestCaseSchema(many=True)
         test_cases_data = test_case_schema.dump(test_cases)
         
@@ -317,7 +317,7 @@ class ProjectController:
             db.session.add(test_result)
             db.session.commit()
             
-            from apps.schemas import TestResultSchema
+            from apps.schemas.models_schema import TestResultSchema
             result_schema = TestResultSchema()
             result_data = result_schema.dump(test_result)
             
@@ -347,7 +347,7 @@ class ProjectController:
         # TODO: 实现实际的批量测试执行逻辑
         # 这里返回模拟的测试结果
         from apps.models import TestResult
-        from apps.schemas import TestResultSchema
+        from apps.schemas.models_schema import TestResultSchema
         import uuid
         from datetime import datetime, timezone
         

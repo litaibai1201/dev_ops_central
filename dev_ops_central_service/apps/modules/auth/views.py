@@ -20,11 +20,13 @@ class LoginAPI(MethodView):
     @auth_blp.response(200, ApiResponseSchema)
     def post(self, login_data):
         """用户登录"""
-        return AuthController.login(
+        data = AuthController.login(
             username=login_data['username'],
             password=login_data['password'],
             remember=login_data.get('remember', False)
         )
+        print(1111, type(data[0]), data[0])
+        return data[0]
 
 @auth_blp.route('/register')
 class RegisterAPI(MethodView):

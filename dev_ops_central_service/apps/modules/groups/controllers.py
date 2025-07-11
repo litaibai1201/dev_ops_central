@@ -33,7 +33,7 @@ class GroupController:
         result = paginate_query(query, page, page_size)
         
         # 序列化数据
-        from apps.schemas import GroupSchema
+        from apps.schemas.models_schema import GroupSchema
         group_schema = GroupSchema(many=True)
         result['data'] = group_schema.dump(result['data'])
         
@@ -69,7 +69,7 @@ class GroupController:
             # 重新查询群组以获取完整数据
             group = GroupModel.get_group_with_relations(group.id)
             
-            from apps.schemas import GroupSchema
+            from apps.schemas.models_schema import GroupSchema
             group_schema = GroupSchema()
             group_data = group_schema.dump(group)
             
@@ -87,7 +87,7 @@ class GroupController:
         if not group:
             return not_found_response('群组')
         
-        from apps.schemas import GroupSchema
+        from apps.schemas.models_schema import GroupSchema
         group_schema = GroupSchema()
         group_data = group_schema.dump(group)
         
@@ -114,7 +114,7 @@ class GroupController:
             GroupModel.update_group(group, group_data)
             db.session.commit()
             
-            from apps.schemas import GroupSchema
+            from apps.schemas.models_schema import GroupSchema
             group_schema = GroupSchema()
             group_data = group_schema.dump(group)
             
@@ -197,7 +197,7 @@ class GroupController:
             # 获取新增的成员信息
             new_member = GroupModel.get_group_member_by_user(user_id, group_id)
             
-            from apps.schemas import UserSchema
+            from apps.schemas.models_schema import UserSchema
             member_data = {
                 'id': new_member.id,
                 'user_id': new_member.user_id,
@@ -242,7 +242,7 @@ class GroupController:
             updated_member = GroupModel.get_group_member(member_id)
             
             from apps.models import User
-            from apps.schemas import UserSchema
+            from apps.schemas.models_schema import UserSchema
             user = User.query.get(updated_member.user_id)
             member_data = {
                 'id': updated_member.id,
@@ -376,7 +376,7 @@ class GroupController:
         ).first()
         
         if existing_request:
-            from apps.schemas import JoinRequestSchema
+            from apps.schemas.models_schema import JoinRequestSchema
             return success_response({
                 'canJoin': False,
                 'reason': '已有待处理的申请',
@@ -462,7 +462,7 @@ class GroupController:
             # 重新查询群组以获取完整数据
             updated_group = GroupModel.get_group_with_relations(group_id)
             
-            from apps.schemas import GroupSchema
+            from apps.schemas.models_schema import GroupSchema
             group_schema = GroupSchema()
             group_data = group_schema.dump(updated_group)
             

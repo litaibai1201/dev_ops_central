@@ -33,7 +33,7 @@ class AuthController:
         # 记录活动
         log_user_activity(user.id, 'login', 'user', user.id)
         
-        from apps.schemas import UserSchema
+        from apps.schemas.models_schema import UserSchema
         user_schema = UserSchema()
         user_data = user_schema.dump(user)
         
@@ -78,7 +78,7 @@ class AuthController:
             # 记录活动
             log_user_activity(user.id, 'register', 'user', user.id)
             
-            from apps.schemas import UserSchema
+            from apps.schemas.models_schema import UserSchema
             user_schema = UserSchema()
             user_data = user_schema.dump(user)
             
@@ -99,7 +99,7 @@ class AuthController:
         if not user:
             return error_response('用户不存在', 404)
         
-        from apps.schemas import UserSchema
+        from apps.schemas.models_schema import UserSchema
         user_schema = UserSchema()
         user_data = user_schema.dump(user)
         

@@ -24,7 +24,7 @@ class JoinRequestController:
             current_user, group_id, user_id, status
         ).all()
         
-        from apps.schemas import JoinRequestSchema
+        from apps.schemas.models_schema import JoinRequestSchema
         request_schema = JoinRequestSchema(many=True)
         requests_data = request_schema.dump(requests)
         
@@ -67,7 +67,7 @@ class JoinRequestController:
             # 重新查询以获取完整数据
             join_request = JoinRequestModel.get_join_request_with_relations(join_request.id)
             
-            from apps.schemas import JoinRequestSchema
+            from apps.schemas.models_schema import JoinRequestSchema
             request_schema = JoinRequestSchema()
             request_data = request_schema.dump(join_request)
             
@@ -110,7 +110,7 @@ class JoinRequestController:
             
             db.session.commit()
             
-            from apps.schemas import JoinRequestSchema
+            from apps.schemas.models_schema import JoinRequestSchema
             request_schema = JoinRequestSchema()
             request_data = request_schema.dump(join_request)
             
@@ -168,7 +168,7 @@ class JoinRequestController:
         try:
             db.session.commit()
             
-            from apps.schemas import JoinRequestSchema
+            from apps.schemas.models_schema import JoinRequestSchema
             request_schema = JoinRequestSchema(many=True)
             processed_data = request_schema.dump(successful_requests)
             
@@ -201,7 +201,7 @@ class JoinRequestController:
             if not check_group_approve_members_permission(current_user.id, join_request.group_id):
                 return forbidden_response('权限不足')
         
-        from apps.schemas import JoinRequestSchema
+        from apps.schemas.models_schema import JoinRequestSchema
         request_schema = JoinRequestSchema()
         request_data = request_schema.dump(join_request)
         
@@ -241,7 +241,7 @@ class JoinRequestController:
         
         join_requests = JoinRequestModel.get_user_join_history(user_id)
         
-        from apps.schemas import JoinRequestSchema
+        from apps.schemas.models_schema import JoinRequestSchema
         request_schema = JoinRequestSchema(many=True)
         requests_data = request_schema.dump(join_requests)
         
@@ -256,7 +256,7 @@ class JoinRequestController:
         
         requests = JoinRequestModel.get_group_pending_requests(group_id)
         
-        from apps.schemas import JoinRequestSchema
+        from apps.schemas.models_schema import JoinRequestSchema
         request_schema = JoinRequestSchema(many=True)
         requests_data = request_schema.dump(requests)
         

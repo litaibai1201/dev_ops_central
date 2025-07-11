@@ -34,7 +34,7 @@ class UserController:
         )
         
         # 分页并序列化数据
-        from apps.schemas import UserSchema
+        from apps.schemas.models_schema import UserSchema
         user_schema = UserSchema()
         result = paginate_query_with_schema(query, user_schema, page, page_size)
         
@@ -51,7 +51,7 @@ class UserController:
         if not user:
             return not_found_response('用户')
         
-        from apps.schemas import UserSchema
+        from apps.schemas.models_schema import UserSchema
         user_schema = UserSchema()
         user_data = user_schema.dump(user)
         
@@ -83,7 +83,7 @@ class UserController:
             UserModel.update_user(user, user_data)
             db.session.commit()
             
-            from apps.schemas import UserSchema
+            from apps.schemas.models_schema import UserSchema
             user_schema = UserSchema()
             user_data = user_schema.dump(user)
             
@@ -129,7 +129,7 @@ class UserController:
             exclude_user_ids=exclude_user_ids
         )
         
-        from apps.schemas import UserSchema
+        from apps.schemas.models_schema import UserSchema
         user_schema = UserSchema(many=True)
         users_data = user_schema.dump(users)
         
@@ -145,7 +145,7 @@ class UserController:
         
         users = UserModel.search_users(search_query)
         
-        from apps.schemas import UserSchema
+        from apps.schemas.models_schema import UserSchema
         user_schema = UserSchema(many=True)
         users_data = user_schema.dump(users)
         
@@ -211,7 +211,7 @@ class UserController:
         if groups is None:
             return not_found_response('用户')
         
-        from apps.schemas import GroupSchema
+        from apps.schemas.models_schema import GroupSchema
         group_schema = GroupSchema(many=True)
         groups_data = group_schema.dump(groups)
         
@@ -230,7 +230,7 @@ class UserController:
         
         memberships = UserModel.get_user_group_memberships(user_id)
         
-        from apps.schemas import GroupMemberSchema
+        from apps.schemas.models_schema import GroupMemberSchema
         membership_schema = GroupMemberSchema(many=True)
         memberships_data = membership_schema.dump(memberships)
         
@@ -245,7 +245,7 @@ class UserController:
         
         join_requests = UserModel.get_user_join_requests(user_id)
         
-        from apps.schemas import JoinRequestSchema
+        from apps.schemas.models_schema import JoinRequestSchema
         request_schema = JoinRequestSchema(many=True)
         requests_data = request_schema.dump(join_requests)
         

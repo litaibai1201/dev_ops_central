@@ -58,137 +58,38 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
   };
 
   const loginForm = (
-    <Form
-      layout="vertical"
+    <AuthForm
+      fields={loginFormFields}
       onFinish={handleLogin}
+      loading={loading}
+      submitText={loading ? '登录中...' : '登录'}
       initialValues={{ remember: true }}
-      size="large"
-    >
-      {loginFormFields.map(field => (
-        <Form.Item
-          key={field.name}
-          name={field.name}
-          rules={field.required ? [{ required: true, message: `请输入${field.placeholder}!` }] : []}
-        >
-          {field.type === 'password' ? (
-            <input 
-              type="password"
-              placeholder={field.placeholder}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #d9d9d9',
-                borderRadius: '6px',
-                fontSize: '16px',
-                outline: 'none'
-              }}
-            />
-          ) : (
-            <input 
-              type="text"
-              placeholder={field.placeholder}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #d9d9d9',
-                borderRadius: '6px',
-                fontSize: '16px',
-                outline: 'none'
-              }}
-            />
-          )}
+      footer={
+        <Form.Item style={{ marginBottom: 0 }}>
+          <Form.Item name="remember" valuePropName="checked" style={{ marginBottom: '16px' }}>
+            <Checkbox>记住我</Checkbox>
+          </Form.Item>
+          <Button 
+            type="primary" 
+            htmlType="submit" 
+            loading={loading}
+            block
+            size="large"
+          >
+            {loading ? '登录中...' : '登录'}
+          </Button>
         </Form.Item>
-      ))}
-      
-      <Form.Item name="remember" valuePropName="checked" style={{ marginBottom: '16px' }}>
-        <Checkbox>记住我</Checkbox>
-      </Form.Item>
-      
-      <Form.Item style={{ marginBottom: 0 }}>
-        <Button 
-          type="primary" 
-          htmlType="submit" 
-          loading={loading}
-          block
-          size="large"
-        >
-          {loading ? '登录中...' : '登录'}
-        </Button>
-      </Form.Item>
-    </Form>
+      }
+    />
   );
 
   const registerForm = (
-    <Form
-      layout="vertical"
+    <AuthForm
+      fields={registerFormFields}
       onFinish={handleRegister}
-      size="large"
-    >
-      {registerFormFields.map(field => (
-        <Form.Item
-          key={field.name}
-          name={field.name}
-          rules={[
-            ...(field.required ? [{ required: true, message: `请输入${field.placeholder}!` }] : []),
-            ...(field.rules || [])
-          ]}
-          dependencies={field.dependencies}
-        >
-          {field.type === 'password' ? (
-            <input 
-              type="password"
-              placeholder={field.placeholder}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #d9d9d9',
-                borderRadius: '6px',
-                fontSize: '16px',
-                outline: 'none'
-              }}
-            />
-          ) : field.type === 'email' ? (
-            <input 
-              type="email"
-              placeholder={field.placeholder}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #d9d9d9',
-                borderRadius: '6px',
-                fontSize: '16px',
-                outline: 'none'
-              }}
-            />
-          ) : (
-            <input 
-              type="text"
-              placeholder={field.placeholder}
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                border: '1px solid #d9d9d9',
-                borderRadius: '6px',
-                fontSize: '16px',
-                outline: 'none'
-              }}
-            />
-          )}
-        </Form.Item>
-      ))}
-      
-      <Form.Item style={{ marginBottom: 0 }}>
-        <Button 
-          type="primary" 
-          htmlType="submit" 
-          loading={loading}
-          block
-          size="large"
-        >
-          {loading ? '注册中...' : '注册'}
-        </Button>
-      </Form.Item>
-    </Form>
+      loading={loading}
+      submitText={loading ? '注册中...' : '注册'}
+    />
   );
 
   const tabItems = [

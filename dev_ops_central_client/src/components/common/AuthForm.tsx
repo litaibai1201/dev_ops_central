@@ -84,7 +84,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
     const rules = [...(field.rules || [])];
     
     if (field.required) {
-      rules.unshift({ required: true, message: `请输入${field.label || field.name}!` });
+      rules.unshift({ required: true, message: `请输入${field.label || field.placeholder || field.name}!` });
     }
     
     if (field.type === 'email') {
@@ -92,7 +92,7 @@ const AuthForm: React.FC<AuthFormProps> = ({
     }
     
     if (field.validator) {
-      rules.push({ validator: field.validator });
+      rules.push(field.validator);
     }
     
     return rules;
@@ -184,13 +184,14 @@ export const registerFormFields: AuthFormField[] = [
     placeholder: '确认密码',
     required: true,
     dependencies: ['password'],
-    validator: (rule: any, value: any) => {
-      const form = rule.getFieldsValue?.();
-      if (!value || form?.password === value) {
-        return Promise.resolve();
-      }
-      return Promise.reject(new Error('两次输入的密码不一致!'));
-    }
+    validator: ({ getFieldValue }) => ({
+      validator(_, value) {
+        if (!value || getFieldValue('password') === value) {
+          return Promise.resolve();
+        }
+        return Promise.reject(new Error('两次输入的密码不一致!'));
+      },
+    })
   }
 ];
 
