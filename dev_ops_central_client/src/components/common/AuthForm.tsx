@@ -176,10 +176,10 @@ export const registerFormFields: AuthFormField[] = [
     type: 'password',
     placeholder: '密码',
     required: true,
-    rules: [{ min: 6, message: '密码至少6个字符!' }]
+    rules: [{ min: 8, message: '密码至少8个字符!' }]
   },
   {
-    name: 'confirmPassword',
+    name: 'confirm_password',
     type: 'password',
     placeholder: '确认密码',
     required: true,
