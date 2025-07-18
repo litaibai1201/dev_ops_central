@@ -10,7 +10,6 @@ import { User } from '../../types';
 import { 
   PageHeader, 
   StatisticsCards, 
-  LoadingState,
   getProjectColumns,
   getProjectStats,
   QuickActions,
@@ -104,50 +103,62 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ user }) => {
   }
 
   return (
-    <LoadingState loading={loading} empty={!projects || projects.length === 0}>
-      <div>
-        <PageHeader
-          title="专案总览"
-          subtitle="查看和管理平台上的所有专案"
+    <div>
+      <PageHeader
+        title="专案总览"
+        subtitle="查看和管理平台上的所有专案"
+      />
+
+      {/* 统计卡片 */}
+      <StatisticsCards data={statisticsData} />
+
+      {/* 快捷操作区域 */}
+      <QuickActions
+        user={user}
+        ownedGroups={ownedGroups}
+        userGroups={userGroups || []}
+        onCreateGroup={handleCreateGroup}
+        onCreateProject={handleCreateProject}
+      />
+
+      {/* 专案列表 */}
+      <Card>
+        <Table
+          columns={columns}
+          dataSource={projects || []}
+          rowKey="id"
+          loading={loading}
+          locale={{
+            emptyText: (projectsError || groupsError) ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <p style={{ color: '#ff4d4f', marginBottom: '8px' }}>加载失败</p>
+                <p style={{ color: '#666', fontSize: '14px' }}>{projectsError || groupsError}</p>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <p style={{ color: '#666' }}>暂无专案数据</p>
+                <p style={{ color: '#999', fontSize: '14px' }}>使用上方快捷操作来创建您的第一个专案</p>
+              </div>
+            )
+          }}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => 
+              `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+          }}
+          scroll={{ x: 1000 }}
         />
+      </Card>
 
-        {/* 统计卡片 */}
-        <StatisticsCards data={statisticsData} />
-
-        {/* 快捷操作区域 */}
-        <QuickActions
-          user={user}
-          ownedGroups={ownedGroups}
-          userGroups={userGroups || []}
-          onCreateGroup={handleCreateGroup}
-          onCreateProject={handleCreateProject}
-        />
-
-        {/* 专案列表 */}
-        <Card>
-          <Table
-            columns={columns}
-            dataSource={projects || []}
-            rowKey="id"
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => 
-                `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-            }}
-            scroll={{ x: 1000 }}
-          />
-        </Card>
-
-        {/* 权限说明 */}
-        <PermissionInfo
-          user={user}
-          userGroups={userGroups || []}
-          ownedGroups={ownedGroups}
-        />
-      </div>
-    </LoadingState>
+      {/* 权限说明 */}
+      <PermissionInfo
+        user={user}
+        userGroups={userGroups || []}
+        ownedGroups={ownedGroups}
+      />
+    </div>
   );
 };
 

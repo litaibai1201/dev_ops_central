@@ -21,7 +21,6 @@ import {
   StatusTag,
   ModalForm,
   groupFormFields,
-  LoadingState,
   UserDisplay,
   TableActions,
   createViewAction,
@@ -358,6 +357,19 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
             dataSource={myGroups}
             rowKey="id"
             loading={groupsLoading}
+            locale={{
+              emptyText: groupsError ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  <p style={{ color: '#ff4d4f', marginBottom: '8px' }}>\u52a0\u8f7d\u5931\u8d25</p>
+                  <p style={{ color: '#666', fontSize: '14px' }}>{groupsError}</p>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  <p style={{ color: '#666' }}>暂无群组数据</p>
+                  <p style={{ color: '#999', fontSize: '14px' }}>点击上方“创建群组”按钮来创建您的第一个群组</p>
+                </div>
+              )
+            }}
             pagination={{
               pageSize: 10,
               showSizeChanger: true,
@@ -388,6 +400,19 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
           dataSource={joinRequests || []}
           rowKey="id"
           loading={requestsLoading}
+          locale={{
+            emptyText: requestsError ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <p style={{ color: '#ff4d4f', marginBottom: '8px' }}>加载失败</p>
+                <p style={{ color: '#666', fontSize: '14px' }}>{requestsError}</p>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <p style={{ color: '#666' }}>暂无入组申请</p>
+                <p style={{ color: '#999', fontSize: '14px' }}>当有用户申请加入您管理的群组时，将在此处显示</p>
+              </div>
+            )
+          }}
           pagination={{
             pageSize: 10,
             showTotal: (total, range) => 
@@ -399,45 +424,43 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
   ];
 
   return (
-    <LoadingState loading={groupsLoading && requestsLoading} empty={!groups || groups.length === 0}>
-      <div>
-        <PageHeader
-          title="群组管理"
-          subtitle="管理和组织您的开发团队"
-        />
+    <div>
+      <PageHeader
+        title="群组管理"
+        subtitle="管理和组织您的开发团队"
+      />
 
-        <Card>
-          <Tabs
-            activeKey={activeTab}
-            onChange={setActiveTab}
-            items={tabItems}
-          />
-        </Card>
-
-        {/* 创建群组模态框 */}
-        <CreateGroupModal
-          visible={createModalVisible}
-          onCancel={() => setCreateModalVisible(false)}
-          onSuccess={handleCreateGroup}
-          currentUser={user}
+      <Card>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={tabItems}
         />
+      </Card>
 
-        {/* 编辑群组模态框 */}
-        <ModalForm
-          title="编辑群组"
-          visible={editModalVisible}
-          onCancel={() => {
-            setEditModalVisible(false);
-            setSelectedGroup(null);
-          }}
-          onFinish={handleEditGroup}
-          fields={groupFormFields}
-          initialValues={selectedGroup}
-          okText="更新"
-          loading={operationLoading}
-        />
-      </div>
-    </LoadingState>
+      {/* 创建群组模态框 */}
+      <CreateGroupModal
+        visible={createModalVisible}
+        onCancel={() => setCreateModalVisible(false)}
+        onSuccess={handleCreateGroup}
+        currentUser={user}
+      />
+
+      {/* 编辑群组模态框 */}
+      <ModalForm
+        title="编辑群组"
+        visible={editModalVisible}
+        onCancel={() => {
+          setEditModalVisible(false);
+          setSelectedGroup(null);
+        }}
+        onFinish={handleEditGroup}
+        fields={groupFormFields}
+        initialValues={selectedGroup}
+        okText="更新"
+        loading={operationLoading}
+      />
+    </div>
   );
 };
 
