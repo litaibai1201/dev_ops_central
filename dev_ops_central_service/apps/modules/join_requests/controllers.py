@@ -19,16 +19,28 @@ class JoinRequestController:
         user_id = query_args.get('user_id')
         status = query_args.get('status')
         
-        # 获取申请列表
-        requests = JoinRequestModel.get_join_requests_for_user(
-            current_user, group_id, user_id, status
-        ).all()
+        print(f"Getting join requests for user {current_user.id} with params: group_id={group_id}, user_id={user_id}, status={status}")
         
-        from apps.schemas.models_schema import JoinRequestSchema
-        request_schema = JoinRequestSchema(many=True)
-        requests_data = request_schema.dump(requests)
-        
-        return success_response(requests_data, '获取成功')
+        try:
+            # 获取申请列表
+            requests_query = JoinRequestModel.get_join_requests_for_user(
+                current_user, group_id, user_id, status
+            )
+            requests = requests_query.all()
+            
+            print(f"Found {len(requests)} join requests")
+            
+            from apps.schemas.models_schema import JoinRequestSchema
+            request_schema = JoinRequestSchema(many=True)
+            requests_data = request_schema.dump(requests)
+            
+            return success_response(requests_data, '获取成功')
+            
+        except Exception as e:
+            print(f"Error getting join requests: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return error_response(f'获取申请列表失败: {str(e)}', 500)
     
     @staticmethod
     def create_join_request(current_user, request_data):

@@ -43,21 +43,43 @@ class JoinRequestModel:
             user_groups.extend([g.id for g in owned_groups])
             
             # 获取用户有审批权限的群组
-            member_records = db.session.query(group_members).filter(
-                and_(
-                    group_members.c.user_id == current_user.id,
-                    group_members.c.permissions.op('->>')('can_approve_members').astext.cast(db.Boolean) == True
-                )
-            ).all()
-            user_groups.extend([m.group_id for m in member_records])
+            try:
+                member_records = db.session.query(group_members).filter(
+                    and_(
+                        group_members.c.user_id == current_user.id,
+                        group_members.c.permissions.op('->>')('can_approve_members').astext.cast(db.Boolean) == True
+                    )
+                ).all()
+                user_groups.extend([m.group_id for m in member_records])
+            except Exception as e:
+                # 如果查询失败，记录错误但不中断
+                print(f"Error querying member permissions: {e}")
+                # 只返回用户自己的申请
+                query = query.filter(JoinRequest.user_id == current_user.id)
+                
+                # 应用其他过滤条件
+                if group_id:
+                    query = query.filter(JoinRequest.group_id == group_id)
+                
+                if user_id:
+                    query = query.filter(JoinRequest.user_id == user_id)
+                
+                if status:
+                    query = query.filter(JoinRequest.status == status)
+                
+                return query.order_by(JoinRequest.created_at.desc())
             
             # 过滤条件：自己的申请或有权限管理的群组的申请
-            query = query.filter(
-                or_(
-                    JoinRequest.user_id == current_user.id,
-                    JoinRequest.group_id.in_(user_groups)
+            if user_groups:
+                query = query.filter(
+                    or_(
+                        JoinRequest.user_id == current_user.id,
+                        JoinRequest.group_id.in_(user_groups)
+                    )
                 )
-            )
+            else:
+                # 如果没有管理权限的群组，只能查看自己的申请
+                query = query.filter(JoinRequest.user_id == current_user.id)
         
         # 应用其他过滤条件
         if group_id:
