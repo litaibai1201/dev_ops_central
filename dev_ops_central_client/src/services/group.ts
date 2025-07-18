@@ -172,10 +172,15 @@ export const groupService = {
     status?: 'pending' | 'approved' | 'rejected';
   }): Promise<ApiResponseData<JoinRequest[]>> => {
     try {
+      console.log('Getting join requests with params:', params);
       const response = await apiClient.get('/join-requests', params);
+      console.log('Join requests response:', response);
       return response;
-    } catch (error) {
-      throw error;
+    } catch (error: any) {
+      console.error('Failed to get join requests:', error);
+      // 提供更详细的错误信息
+      const errorMessage = error?.message || '获取加入申请列表失败';
+      throw new Error(errorMessage);
     }
   },
 

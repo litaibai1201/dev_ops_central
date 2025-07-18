@@ -18,15 +18,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin }) => {
       const response = await authService.login(values);
       
       if (response.success) {
-        // 保存用户信息和token到localStorage
+        // 构造用户信息和token
         const userWithToken = {
           ...response.data.user,
           token: response.data.token
         };
-        localStorage.setItem('user', JSON.stringify(userWithToken));
         
-        onLogin(userWithToken);
         message.success('登录成功！');
+        onLogin(userWithToken);
       } else {
         throw new Error(response.message || '登录失败');
       }

@@ -20,9 +20,24 @@ export const useDataService = <T,>(
       const result = await fetchFunction();
       setData(result);
     } catch (err: any) {
-      const errorMessage = err?.message || '获取数据失败';
+      let errorMessage = '获取数据失败';
+      
+      // 处理不同类型的错误
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      console.error('数据获取失败:', {
+        error: err,
+        message: errorMessage,
+        stack: err?.stack
+      });
+      
       setError(errorMessage);
-      console.error('数据获取失败:', err);
       message.error(errorMessage);
     } finally {
       setLoading(false);
@@ -140,8 +155,11 @@ export const useGroupDetail = (groupId: string) => {
 export const useJoinRequestData = (groupId?: string) => {
   const fetchJoinRequests = useCallback(async (): Promise<JoinRequest[]> => {
     try {
+      console.log('Fetching join requests for groupId:', groupId);
       const params = groupId ? { groupId } : {};
       const response = await groupService.getJoinRequests(params);
+      
+      console.log('Join requests API response:', response);
       
       if (response.success) {
         return response.data;
@@ -149,6 +167,11 @@ export const useJoinRequestData = (groupId?: string) => {
       throw new Error(response.message || '获取加入申请失败');
     } catch (error: any) {
       console.error('获取加入申请失败:', error);
+      // 如果是权限错误，返回空数组而不是抛出错误
+      if (error.code === 403 || error.message?.includes('权限')) {
+        console.warn('无权限查看加入申请，返回空列表');
+        return [];
+      }
       throw new Error(error.message || '获取加入申请失败');
     }
   }, [groupId]);

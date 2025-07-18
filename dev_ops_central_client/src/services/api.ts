@@ -37,9 +37,12 @@ api.interceptors.response.use(
   (error) => {
     // 处理通用错误
     if (error.response?.status === 401) {
-      // 未授权，清除用户信息并重定向到登录页
+      // 未授权，清除用户信息并重定向到根路径
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // 只有在不是根路径时才重定向，避免无限重定向
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      }
     }
     
     return Promise.reject({

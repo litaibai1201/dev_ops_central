@@ -308,7 +308,7 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
   };
 
   // 错误处理
-  if (groupsError || requestsError) {
+  if (groupsError) {
     return (
       <div>
         <PageHeader
@@ -318,12 +318,17 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
         <Card>
           <div style={{ textAlign: 'center', padding: '50px' }}>
             <p style={{ color: '#ff4d4f' }}>
-              {groupsError || requestsError}
+              {groupsError}
             </p>
           </div>
         </Card>
       </div>
     );
+  }
+
+  // 对于加入请求错误，只显示警告但不阻止页面渲染
+  if (requestsError) {
+    console.warn('加入请求数据加载失败:', requestsError);
   }
 
   const pendingRequestsCount = joinRequests?.filter(req => req.status === 'pending').length || 0;
