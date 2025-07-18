@@ -14,7 +14,6 @@ import {
 import { UserOutlined, SearchOutlined } from '@ant-design/icons';
 import { User, GroupForm } from '../../types';
 import { groupService } from '../../services/group';
-import { userService } from '../../services/user';
 
 interface CreateGroupModalProps {
   visible: boolean;
@@ -55,59 +54,29 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
   const fetchAvailableUsers = async (search?: string) => {
     try {
       setSearchLoading(true);
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 500));
       
-      // 模拟用户数据
-      const mockUsers: User[] = [
-        {
-          id: '2',
-          username: 'developer1',
-          email: 'dev1@company.com',
-          role: 'user',
-          createdAt: '2024-01-02',
-          updatedAt: '2024-01-02'
-        },
-        {
-          id: '3',
-          username: 'developer2',
-          email: 'dev2@company.com',
-          role: 'user',
-          createdAt: '2024-01-03',
-          updatedAt: '2024-01-03'
-        },
-        {
-          id: '4',
-          username: 'designer1',
-          email: 'design1@company.com',
-          role: 'user',
-          createdAt: '2024-01-04',
-          updatedAt: '2024-01-04'
-        },
-        {
-          id: '5',
-          username: 'tester1',
-          email: 'test1@company.com',
-          role: 'user',
-          createdAt: '2024-01-05',
-          updatedAt: '2024-01-05'
-        }
-      ];
-
-      // 过滤掉当前用户
-      const filteredUsers = mockUsers.filter(user => user.id !== currentUser.id);
+      console.log('Fetching available users with search:', search);
       
-      // 如果有搜索条件，进行过滤
-      const searchedUsers = search 
-        ? filteredUsers.filter(user => 
-            user.username.toLowerCase().includes(search.toLowerCase()) ||
-            user.email.toLowerCase().includes(search.toLowerCase())
-          )
-        : filteredUsers;
-
-      setAvailableUsers(searchedUsers);
-    } catch (error) {
-      message.error('获取用户列表失败');
+      // 调用真实的API接口
+      const response = await groupService.getAvailableUsers({ 
+        search: search || '' 
+      });
+      
+      console.log('Available users response:', response);
+      
+      if (response.success) {
+        // 过滤掉当前用户
+        const filteredUsers = response.data.filter(user => user.id !== currentUser.id);
+        setAvailableUsers(filteredUsers);
+      } else {
+        console.error('Failed to fetch users:', response.message);
+        setAvailableUsers([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching available users:', error);
+      const errorMessage = error?.message || '获取用户列表失败';
+      message.error(errorMessage);
+      setAvailableUsers([]);
     } finally {
       setSearchLoading(false);
     }
@@ -130,14 +99,24 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
         memberIds: selectedMembers.map(member => member.id)
       };
 
-      // 模拟API调用
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('Creating group with data:', formData);
       
-      message.success('群组创建成功！');
-      handleCancel();
-      onSuccess();
-    } catch (error) {
-      message.error('创建群组失败');
+      // 调用真实的API接口
+      const response = await groupService.createGroup(formData);
+      
+      console.log('Create group response:', response);
+      
+      if (response.success) {
+        message.success('群组创建成功！');
+        handleCancel();
+        onSuccess();
+      } else {
+        throw new Error(response.message || '创建群组失败');
+      }
+    } catch (error: any) {
+      console.error('Create group error:', error);
+      const errorMessage = error?.message || '创建群组失败';
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }

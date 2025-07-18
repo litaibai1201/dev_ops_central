@@ -237,9 +237,15 @@ const GroupManagementPage: React.FC<GroupManagementPageProps> = ({ user }) => {
 
   // 处理群组创建
   const handleCreateGroup = async () => {
-    setCreateModalVisible(false);
-    message.success('群组创建成功');
-    await refetchGroups();
+    try {
+      console.log('Group creation successful, refreshing data...');
+      setCreateModalVisible(false);
+      await refetchGroups();
+      console.log('Group data refreshed');
+    } catch (error) {
+      console.error('Error refreshing groups after creation:', error);
+      message.error('刷新群组数据失败');
+    }
   };
 
   // 处理群组编辑
