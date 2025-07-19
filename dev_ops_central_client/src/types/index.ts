@@ -207,7 +207,7 @@ export interface ProjectForm {
 export interface GroupForm {
   name: string;
   description: string;
-  memberIds?: string[]; // 创建群组时添加的成员ID列表
+  member_ids?: string[]; // 创建群组时添加的成员ID列表
 }
 
 export interface ApiMethodForm {

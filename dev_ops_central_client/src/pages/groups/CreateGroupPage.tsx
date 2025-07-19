@@ -141,7 +141,7 @@ const CreateGroupPage: React.FC<CreateGroupPageProps> = ({ user }) => {
         const groupData: GroupForm = {
           name: values.groupName,
           description: values.description,
-          memberIds: members
+          member_ids: members
             .filter(m => m.role !== 'owner') // 排除群主
             .map(m => m.user.id)
         };

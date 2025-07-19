@@ -96,7 +96,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({
       const formData: GroupForm = {
         name: values.name,
         description: values.description,
-        memberIds: selectedMembers.map(member => member.id)
+        member_ids: selectedMembers.map(member => member.id)
       };
 
       console.log('Creating group with data:', formData);
