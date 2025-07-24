@@ -202,7 +202,7 @@ class UserController:
     
     @staticmethod
     def get_user_groups(current_user, user_id):
-        """获取用户所属的群组列表"""
+        """获取用户所属的群组列表 - 修复后的版本"""
         # 用户只能查看自己的群组，除非是系统管理员
         if current_user.id != user_id and current_user.role != 'system_admin':
             return forbidden_response('权限不足')
@@ -211,11 +211,90 @@ class UserController:
         if groups is None:
             return not_found_response('用户')
         
-        from apps.schemas.models_schema import GroupSchema
-        group_schema = GroupSchema(many=True)
-        groups_data = group_schema.dump(groups)
+        # 手动构造包含成员信息的群组数据
+        groups_data = []
+        for group in groups:
+            # 获取群组成员
+            members_data = UserController._get_group_members_data(group.id)
+            
+            # 构造群组数据
+            group_data = {
+                'id': group.id,
+                'name': group.name,
+                'description': group.description,
+                'ownerId': group.owner_id,
+                'owner': {
+                    'id': group.owner.id,
+                    'username': group.owner.username,
+                    'email': group.owner.email,
+                    'avatar': group.owner.avatar,
+                    'role': group.owner.role,
+                    'createdAt': group.owner.created_at.isoformat() if group.owner.created_at else None,
+                    'updatedAt': group.owner.updated_at.isoformat() if group.owner.updated_at else None
+                },
+                'members': members_data,
+                'projectCount': group.project_count,
+                'createdAt': group.created_at.isoformat() if group.created_at else None,
+                'updatedAt': group.updated_at.isoformat() if group.updated_at else None
+            }
+            groups_data.append(group_data)
         
         return success_response(groups_data, '获取成功')
+    
+    @staticmethod
+    def _get_group_members_data(group_id):
+        """获取群组成员数据的辅助方法"""
+        from apps.models import group_members, User
+        
+        # 查询group_members表获取成员信息
+        members_query = db.session.query(
+            group_members.c.id,
+            group_members.c.user_id,
+            group_members.c.group_id,
+            group_members.c.role,
+            group_members.c.permissions,
+            group_members.c.joined_at,
+            User.id.label('user_id_full'),
+            User.username,
+            User.email,
+            User.avatar,
+            User.role.label('user_role'),
+            User.created_at.label('user_created_at'),
+            User.updated_at.label('user_updated_at')
+        ).join(User, group_members.c.user_id == User.id
+        ).filter(group_members.c.group_id == group_id).all()
+        
+        members_data = []
+        for row in members_query:
+            # 构造用户对象
+            user_data = {
+                'id': row.user_id,
+                'username': row.username,
+                'email': row.email,
+                'avatar': row.avatar,
+                'role': row.user_role,
+                'createdAt': row.user_created_at.isoformat() if row.user_created_at else None,
+                'updatedAt': row.user_updated_at.isoformat() if row.user_updated_at else None
+            }
+            
+            # 构造成员对象
+            permissions = row.permissions or {}
+            member_data = {
+                'id': row.id,
+                'userId': row.user_id,
+                'groupId': row.group_id,
+                'user': user_data,
+                'role': row.role,
+                'permissions': {
+                    'canApproveMembers': permissions.get('can_approve_members', False),
+                    'canEditProject': permissions.get('can_edit_project', False),
+                    'canManageMembers': permissions.get('can_manage_members', False)
+                },
+                'joinedAt': row.joined_at.isoformat() if row.joined_at else None
+            }
+            members_data.append(member_data)
+        
+        return members_data
     
     @staticmethod
     def get_user_group_memberships(current_user, user_id):

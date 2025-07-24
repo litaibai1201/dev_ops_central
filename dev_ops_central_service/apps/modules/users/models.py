@@ -3,7 +3,7 @@
 """
 
 from sqlalchemy.orm import joinedload
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, text
 
 from apps import db
 from apps.models import User, Group, group_members
@@ -115,17 +115,37 @@ class UserModel:
     
     @staticmethod
     def get_user_groups(user_id):
-        """获取用户所属的群组列表"""
-        user = User.query.options(
-            joinedload(User.group_memberships),
-            joinedload(User.owned_groups)
-        ).get(user_id)
-        
+        """获取用户所属的群组列表 - 包含成员信息"""
+        user = User.query.get(user_id)
         if not user:
-            return []
+            return None
         
-        # 合并拥有的群组和成员群组
-        return list(user.owned_groups) + list(user.group_memberships)
+        # 获取用户拥有的群组
+        owned_groups = Group.query.filter_by(owner_id=user_id).all()
+        
+        # 获取用户参与的群组（通过group_members表）
+        member_group_ids = db.session.query(group_members.c.group_id).filter(
+            group_members.c.user_id == user_id
+        ).all()
+        member_group_ids = [gid[0] for gid in member_group_ids]
+        
+        # 获取参与的群组（排除已拥有的群组）
+        owned_group_ids = [g.id for g in owned_groups]
+        member_only_group_ids = [gid for gid in member_group_ids if gid not in owned_group_ids]
+        
+        member_groups = []
+        if member_only_group_ids:
+            member_groups = Group.query.filter(Group.id.in_(member_only_group_ids)).all()
+        
+        # 合并所有群组
+        all_groups = owned_groups + member_groups
+        
+        # 为每个群组预加载owner信息
+        for group in all_groups:
+            if not hasattr(group, 'owner') or group.owner is None:
+                group.owner = User.query.get(group.owner_id)
+        
+        return all_groups
     
     @staticmethod
     def get_user_group_memberships(user_id):
