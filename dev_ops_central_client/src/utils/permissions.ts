@@ -176,6 +176,72 @@ export class PermissionChecker {
     return this.canViewProjectDetails(project, userGroupMemberships);
   }
 
+  // === 群组相关权限检查方法 ===
+  
+  // 检查是否为群组所有者
+  isGroupOwner(group: Group): boolean {
+    return group.ownerId === this.user.id;
+  }
+  
+  // 检查是否为群组成员（包括所有者）
+  isGroupMember(group: Group): boolean {
+    // 群组所有者也是成员
+    if (this.isGroupOwner(group)) {
+      return true;
+    }
+    
+    // 检查是否在成员列表中
+    return group.members?.some(member => member.userId === this.user.id) || false;
+  }
+  
+  // 检查是否为群组管理员
+  isGroupAdmin(group: Group): boolean {
+    // 群组所有者是管理员
+    if (this.isGroupOwner(group)) {
+      return true;
+    }
+    
+    // 检查是否有admin角色
+    const membership = group.members?.find(member => member.userId === this.user.id);
+    return membership?.role === 'admin';
+  }
+  
+  // 检查是否可以查看群组
+  canViewGroup(group: Group): boolean {
+    // 系统管理员、群组成员都可以查看
+    return this.isSystemAdmin() || this.isGroupMember(group);
+  }
+  
+  // 检查是否可以删除群组
+  canDeleteGroup(group: Group): boolean {
+    // 只有系统管理员和群组所有者可以删除
+    return this.isSystemAdmin() || this.isGroupOwner(group);
+  }
+  
+  // 检查是否可以审批成员申请
+  canApproveMembers(group: Group): boolean {
+    // 系统管理员和群组所有者可以审批
+    if (this.isSystemAdmin() || this.isGroupOwner(group)) {
+      return true;
+    }
+    
+    // 有审批权限的成员可以审批
+    const membership = group.members?.find(member => member.userId === this.user.id);
+    return membership?.permissions.canApproveMembers || false;
+  }
+  
+  // 检查是否可以管理成员
+  canManageMembers(group: Group): boolean {
+    // 系统管理员和群组所有者可以管理
+    if (this.isSystemAdmin() || this.isGroupOwner(group)) {
+      return true;
+    }
+    
+    // 有管理成员权限的成员可以管理
+    const membership = group.members?.find(member => member.userId === this.user.id);
+    return membership?.permissions.canManageMembers || false;
+  }
+
   // 私有辅助方法
   private isGroupMember(groupId: string, userGroupMemberships: GroupMember[] = []): boolean {
     return userGroupMemberships.some(membership => membership.groupId === groupId);

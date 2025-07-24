@@ -20,12 +20,24 @@ export class PermissionChecker {
 
   // 检查是否为群组成员
   isGroupMember(group: Group): boolean {
-    return group.members.some(member => member.userId === this.user.id);
+    // 群组所有者也是成员
+    if (this.isGroupOwner(group)) {
+      return true;
+    }
+    
+    // 检查是否在成员列表中，处理members可能为undefined的情况
+    return group.members?.some(member => member.userId === this.user.id) || false;
   }
 
   // 检查是否为群组管理员
   isGroupAdmin(group: Group): boolean {
-    const memberInfo = group.members.find(member => member.userId === this.user.id);
+    // 群组所有者是管理员
+    if (this.isGroupOwner(group)) {
+      return true;
+    }
+    
+    // 检查是否有admin角色，处理members可能为undefined的情况
+    const memberInfo = group.members?.find(member => member.userId === this.user.id);
     return memberInfo?.role === 'admin';
   }
 
@@ -45,7 +57,8 @@ export class PermissionChecker {
       return true;
     }
     
-    const memberInfo = group.members.find(member => member.userId === this.user.id);
+    // 处理members可能为undefined的情况
+    const memberInfo = group.members?.find(member => member.userId === this.user.id);
     return memberInfo?.permissions.canApproveMembers || false;
   }
 
@@ -55,7 +68,8 @@ export class PermissionChecker {
       return true;
     }
     
-    const memberInfo = group.members.find(member => member.userId === this.user.id);
+    // 处理members可能为undefined的情况
+    const memberInfo = group.members?.find(member => member.userId === this.user.id);
     return memberInfo?.permissions.canManageMembers || false;
   }
 
@@ -80,7 +94,8 @@ export class PermissionChecker {
       return 'owner';
     }
     
-    const memberInfo = group.members.find(member => member.userId === this.user.id);
+    // 处理members可能为undefined的情况
+    const memberInfo = group.members?.find(member => member.userId === this.user.id);
     return memberInfo?.role as 'admin' | 'member' || null;
   }
 

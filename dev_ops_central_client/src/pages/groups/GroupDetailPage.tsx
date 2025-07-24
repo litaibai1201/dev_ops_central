@@ -90,19 +90,68 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
 
   const { group, projects } = data;
 
-  // 日期格式化工具
+  // 数据完整性检查
+  if (!group) {
+    return (
+      <div>
+        <Button 
+          icon={<ArrowLeftOutlined />} 
+          onClick={() => navigate('/groups')}
+          style={{ marginBottom: 16 }}
+        >
+          返回
+        </Button>
+        <Card>
+          <div style={{ textAlign: 'center', padding: '50px' }}>
+            <p style={{ color: '#ff4d4f' }}>群组数据加载失败</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // 确保关键字段存在
+  if (!group.id || !group.name) {
+    console.error('群组数据不完整:', group);
+    return (
+      <div>
+        <Button 
+          icon={<ArrowLeftOutlined />} 
+          onClick={() => navigate('/groups')}
+          style={{ marginBottom: 16 }}
+        >
+          返回
+        </Button>
+        <Card>
+          <div style={{ textAlign: 'center', padding: '50px' }}>
+            <p style={{ color: '#ff4d4f' }}>群组数据结构异常</p>
+            <p style={{ color: '#999', fontSize: '14px' }}>请刷新页面或联系管理员</p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // 日期格式化工具 - 添加错误处理
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}年${month}月${day}日`;
+    try {
+      if (!dateString) return '未知';
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '无效日期';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}年${month}月${day}日`;
+    } catch (error) {
+      console.error('日期格式化错误:', error, '原始数据:', dateString);
+      return '格式化错误';
+    }
   };
 
-  // 权限检查
-  const isOwner = permissions.isGroupOwner(group);
-  const isMember = permissions.isGroupMember(group);
-  const isGroupAdmin = permissions.isGroupAdmin(group);
+  // 权限检查 - 添加空值检查
+  const isOwner = group && permissions.isGroupOwner(group);
+  const isMember = group && permissions.isGroupMember(group);
+  const isGroupAdmin = group && permissions.isGroupAdmin(group);
   const isSystemAdmin = permissions.isSystemAdmin();
 
   // 群组成员表格列配置
@@ -222,16 +271,20 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
             <Card title="群组信息" style={{ marginBottom: 24 }}>
               <Descriptions column={1}>
                 <Descriptions.Item label="群组名称">{group.name}</Descriptions.Item>
-                <Descriptions.Item label="群组描述">{group.description}</Descriptions.Item>
+                <Descriptions.Item label="群组描述">{group.description || '无描述'}</Descriptions.Item>
                 <Descriptions.Item label="创建时间">
                   {formatDate(group.createdAt)}
                 </Descriptions.Item>
                 <Descriptions.Item label="群主">
-                  <UserDisplay
-                    username={group.owner.username}
-                    email={group.owner.email}
-                    showCrown={true}
-                  />
+                  {group.owner ? (
+                    <UserDisplay
+                      username={group.owner.username}
+                      email={group.owner.email}
+                      showCrown={true}
+                    />
+                  ) : (
+                    <span style={{ color: '#999' }}>未知</span>
+                  )}
                 </Descriptions.Item>
               </Descriptions>
             </Card>
@@ -307,10 +360,10 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
     },
   ];
 
-  // 创建操作按钮数组
+  // 创建操作按钮数组 - 添加空值检查
   const actionButtons = [];
   
-  if (permissions.canEditGroup(group)) {
+  if (group && permissions.canEditGroup(group)) {
     actionButtons.push(
       <Button
         key="settings"
@@ -322,7 +375,7 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
     );
   }
 
-  if (permissions.canManageMembers(group)) {
+  if (group && permissions.canManageMembers(group)) {
     actionButtons.push(
       <Button
         key="invite"

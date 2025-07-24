@@ -11,9 +11,9 @@ class ApiResponseSchema(Schema):
 
 class PaginationSchema(Schema):
     page = fields.Integer(missing=1, validate=validate.Range(min=1))
-    page_size = fields.Integer(missing=20, validate=validate.Range(min=1, max=100))
-    sort_by = fields.String(missing='created_at')
-    sort_order = fields.String(missing='desc', validate=validate.OneOf(['asc', 'desc']))
+    page_size = fields.Integer(missing=20, validate=validate.Range(min=1, max=100), data_key='pageSize')
+    sort_by = fields.String(missing='created_at', data_key='sortBy')
+    sort_order = fields.String(missing='desc', validate=validate.OneOf(['asc', 'desc']), data_key='sortOrder')
 
 
 class PaginatedResponseSchema(Schema):
@@ -73,7 +73,7 @@ class ResetPasswordSchema(Schema):
 class GroupCreateSchema(Schema):
     name = fields.String(required=True, validate=validate.Length(min=1, max=100))
     description = fields.String()
-    member_ids = fields.List(fields.String())
+    member_ids = fields.List(fields.String(), data_key='memberIds')  # 映射camelCase
 
 
 class GroupUpdateSchema(Schema):
@@ -85,15 +85,15 @@ class GroupUpdateSchema(Schema):
 class ProjectCreateSchema(Schema):
     name = fields.String(required=True, validate=validate.Length(min=1, max=100))
     description = fields.String()
-    group_id = fields.String(required=True)
-    is_public = fields.Boolean(missing=True)
+    group_id = fields.String(required=True, data_key='groupId')
+    is_public = fields.Boolean(missing=True, data_key='isPublic')
     tags = fields.List(fields.String())
     version = fields.String(missing='v1.0.0')
 
 class ProjectUpdateSchema(Schema):
     name = fields.String(validate=validate.Length(min=1, max=100))
     description = fields.String()
-    is_public = fields.Boolean()
+    is_public = fields.Boolean(data_key='isPublic')
     tags = fields.List(fields.String())
     version = fields.String()
     status = fields.String(validate=validate.OneOf(['active', 'inactive', 'archived']))
@@ -202,7 +202,7 @@ class GroupSearchSchema(PaginationSchema):
 
 class ProjectSearchSchema(PaginationSchema):
     search = fields.String()
-    group_id = fields.String()
+    group_id = fields.String(data_key='groupId')  # 映射camelCase到snake_case
     status = fields.String(validate=validate.OneOf(['active', 'inactive', 'archived']))
 
 class ApiSearchSchema(Schema):
