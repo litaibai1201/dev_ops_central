@@ -435,12 +435,6 @@ const GroupDetailPage: React.FC<GroupDetailPageProps> = ({ user }) => {
         </Button>
       </div>
 
-      {/* 分隔线 */}
-      <div style={{
-        borderTop: '1px solid #000',
-        marginBottom: 24
-      }} />
-
       {/* 直接放置 Tabs，移除 Card 包装 */}
       <Tabs
         items={tabItems}
