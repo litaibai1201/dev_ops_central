@@ -1,0 +1,652 @@
+[2025-08-11 15:27:55,965][dataset_controller.py][228][ERROR][6127120384] - 處理文件上傳失敗: localhost:27017: [Errno 61] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 68999b5d495ecc3a5013ce9d, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 61] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+[2025-08-11 15:28:12,649][dataset_controller.py][228][ERROR][6177599488] - 處理文件上傳失敗: localhost:27017: [Errno 61] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 68999b5d495ecc3a5013ce9d, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 61] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+[2025-08-11 15:30:04,996][dataset_controller.py][228][ERROR][6129266688] - 處理文件上傳失敗: localhost:27017: [Errno 61] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 68999bdeaaf0a67b0a0122e0, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [Errno 61] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+[2025-08-11 15:48:30,046][dataset_controller.py][228][ERROR][6198472704] - 處理文件上傳失敗: ValidationError (DatasetFiles:None) (String value is too long: ['current_version_id'])
+[2025-08-11 15:49:04,920][dataset_controller.py][229][ERROR][6136229888] - 處理文件上傳失敗: ValidationError (DatasetFiles:None) (String value is too long: ['current_version_id'])
+[2025-08-11 15:52:19,997][dataset_controller.py][229][ERROR][6204878848] - 處理文件上傳失敗: ValidationError (DatasetFiles:None) (String value is too long: ['current_version_id'])
+[2025-08-11 16:13:05,448][dataset_controller.py][227][ERROR][6196408320] - 處理文件上傳失敗: 114.33.127.60:27017: [Errno 61] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 6899a5f325b3e1ba93a3870b, topology_type: Unknown, servers: [<ServerDescription ('114.33.127.60', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('114.33.127.60:27017: [Errno 61] Connection refused (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>
+[2025-08-12 11:32:13,128][common_tools.py][51][ERROR][6202159104] - (<models.dataset_model.OperDatasetFileModel object at 0x103ca19f0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 11:32:13,143][common_tools.py][52][ERROR][6202159104] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+pymysql.err.OperationalError: (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 169, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 156, in search_file_id_list
+    result = query.paginate(page=page, per_page=size, error_out=False)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/query.py", line 98, in paginate
+    return QueryPagination(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2673, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2827, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+    return self._execute_internal(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2247, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+    return meth(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+[SQL: SELECT DISTINCT dataset_file_form.file_id AS dataset_file_form_file_id, dataset_file_form.file_version_id AS dataset_file_form_file_version_id 
+FROM dataset_file_form 
+WHERE dataset_file_form.dataset_id = %(dataset_id_1)s AND dataset_file_form.status = %(status_1)s AND dataset_file_form.dataset_version <= %(dataset_version_1)s ORDER BY dataset_file_form.dataset_version DESC 
+ LIMIT %(param_1)s, %(param_2)s]
+[parameters: {'dataset_id_1': 1754898888113, 'status_1': 1, 'dataset_version_1': '1.0', 'param_1': 0, 'param_2': 10}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+[2025-08-12 11:33:48,673][common_tools.py][51][ERROR][6194294784] - (<models.dataset_model.OperDatasetFileModel object at 0x1044202e0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 11:33:48,686][common_tools.py][52][ERROR][6194294784] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+pymysql.err.OperationalError: (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 169, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 156, in search_file_id_list
+    result = query.paginate(page=page, per_page=size, error_out=False)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/query.py", line 98, in paginate
+    return QueryPagination(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2673, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2827, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+    return self._execute_internal(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2247, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+    return meth(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+[SQL: SELECT DISTINCT dataset_file_form.file_id AS dataset_file_form_file_id, dataset_file_form.file_version_id AS dataset_file_form_file_version_id 
+FROM dataset_file_form 
+WHERE dataset_file_form.dataset_id = %(dataset_id_1)s AND dataset_file_form.status = %(status_1)s AND dataset_file_form.dataset_version <= %(dataset_version_1)s ORDER BY dataset_file_form.dataset_version DESC 
+ LIMIT %(param_1)s, %(param_2)s]
+[parameters: {'dataset_id_1': 1754898888113, 'status_1': 1, 'dataset_version_1': '1.0', 'param_1': 0, 'param_2': 10}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+[2025-08-12 11:35:35,360][common_tools.py][51][ERROR][6189494272] - (<models.dataset_model.OperDatasetFileModel object at 0x1062ec2e0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 11:35:35,372][common_tools.py][52][ERROR][6189494272] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+pymysql.err.OperationalError: (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 167, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 156, in search_file_id_list
+    result = query.paginate(page=page, per_page=size, error_out=False)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/query.py", line 98, in paginate
+    return QueryPagination(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2673, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2827, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+    return self._execute_internal(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2247, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+    return meth(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+[SQL: SELECT DISTINCT dataset_file_form.file_id AS dataset_file_form_file_id, dataset_file_form.file_version_id AS dataset_file_form_file_version_id 
+FROM dataset_file_form 
+WHERE dataset_file_form.dataset_id = %(dataset_id_1)s AND dataset_file_form.status = %(status_1)s AND dataset_file_form.dataset_version <= %(dataset_version_1)s ORDER BY dataset_file_form.dataset_version DESC 
+ LIMIT %(param_1)s, %(param_2)s]
+[parameters: {'dataset_id_1': 1754898888113, 'status_1': 1, 'dataset_version_1': '1.0', 'param_1': 0, 'param_2': 10}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+[2025-08-12 11:36:01,909][common_tools.py][51][ERROR][6164115456] - (<models.dataset_model.OperDatasetFileModel object at 0x1063a82b0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 11:36:01,920][common_tools.py][52][ERROR][6164115456] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+pymysql.err.OperationalError: (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 167, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 156, in search_file_id_list
+    result = query.paginate(page=page, per_page=size, error_out=False)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/query.py", line 98, in paginate
+    return QueryPagination(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2673, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2827, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+    return self._execute_internal(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2247, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+    return meth(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+[SQL: SELECT DISTINCT dataset_file_form.file_id AS dataset_file_form_file_id, dataset_file_form.file_version_id AS dataset_file_form_file_version_id 
+FROM dataset_file_form 
+WHERE dataset_file_form.dataset_id = %(dataset_id_1)s AND dataset_file_form.status = %(status_1)s AND dataset_file_form.dataset_version <= %(dataset_version_1)s ORDER BY dataset_file_form.dataset_version DESC 
+ LIMIT %(param_1)s, %(param_2)s]
+[parameters: {'dataset_id_1': 1754898888113, 'status_1': 1, 'dataset_version_1': '1.0', 'param_1': 0, 'param_2': 10}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+[2025-08-12 11:36:33,804][common_tools.py][51][ERROR][6201077760] - (<models.dataset_model.OperDatasetFileModel object at 0x103db02b0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 11:36:33,816][common_tools.py][52][ERROR][6201077760] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+pymysql.err.OperationalError: (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 167, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 156, in search_file_id_list
+    result = query.paginate(page=page, per_page=size, error_out=False)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/query.py", line 98, in paginate
+    return QueryPagination(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 72, in __init__
+    items = self._query_items()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/flask_sqlalchemy/pagination.py", line 358, in _query_items
+    out = query.limit(self.per_page).offset(self._query_offset).all()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2673, in all
+    return self._iter().all()  # type: ignore
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/query.py", line 2827, in _iter
+    result: Union[ScalarResult[_T], Result[_T]] = self.session.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2362, in execute
+    return self._execute_internal(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/session.py", line 2247, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/orm/context.py", line 293, in orm_execute_statement
+    result = conn.execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1418, in execute
+    return meth(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/elements.py", line 515, in _execute_on_connection
+    return connection._execute_clauseelement(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1640, in _execute_clauseelement
+    ret = self._execute_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+    return self._exec_single_context(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 2355, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+    self.dialect.do_execute(
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/engine/default.py", line 941, in do_execute
+    cursor.execute(statement, parameters)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 153, in execute
+    result = self._query(query)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/cursors.py", line 322, in _query
+    conn.query(q)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 563, in query
+    self._affected_rows = self._read_query_result(unbuffered=unbuffered)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 825, in _read_query_result
+    result.read()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 1199, in read
+    first_packet = self.connection._read_packet()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/connections.py", line 775, in _read_packet
+    packet.raise_for_error()
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/protocol.py", line 219, in raise_for_error
+    err.raise_mysql_exception(self._data)
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/pymysql/err.py", line 150, in raise_mysql_exception
+    raise errorclass(errno, errval)
+sqlalchemy.exc.OperationalError: (pymysql.err.OperationalError) (3065, "Expression #1 of ORDER BY clause is not in SELECT list, references column 'database_service.dataset_file_form.dataset_version' which is not in SELECT list; this is incompatible with DISTINCT")
+[SQL: SELECT DISTINCT dataset_file_form.file_id AS dataset_file_form_file_id, dataset_file_form.file_version_id AS dataset_file_form_file_version_id 
+FROM dataset_file_form 
+WHERE dataset_file_form.dataset_id = %(dataset_id_1)s AND dataset_file_form.status = %(status_1)s AND dataset_file_form.dataset_version <= %(dataset_version_1)s ORDER BY dataset_file_form.dataset_version DESC 
+ LIMIT %(param_1)s, %(param_2)s]
+[parameters: {'dataset_id_1': 1754898888113, 'status_1': 1, 'dataset_version_1': '1.0', 'param_1': 0, 'param_2': 10}]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+[2025-08-12 14:48:12,847][common_tools.py][51][ERROR][6138277888] - (<models.dataset_model.OperDatasetFileModel object at 0x10798c2b0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:48:12,851][common_tools.py][52][ERROR][6138277888] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 171, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 152, in search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 14:49:26,330][common_tools.py][51][ERROR][6204731392] - (<models.dataset_model.OperDatasetFileModel object at 0x1056ac2b0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:49:26,333][common_tools.py][52][ERROR][6204731392] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 174, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 155, in search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 14:50:03,474][common_tools.py][51][ERROR][6204895232] - (<models.dataset_model.OperDatasetFileModel object at 0x103a0c2b0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:50:03,477][common_tools.py][52][ERROR][6204895232] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 175, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 156, in search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 14:50:21,885][common_tools.py][51][ERROR][6167965696] - (<models.dataset_model.OperDatasetFileModel object at 0x105d442b0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:50:21,888][common_tools.py][52][ERROR][6167965696] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 175, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 156, in search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 14:50:53,883][common_tools.py][51][ERROR][6202896384] - (<models.dataset_model.OperDatasetFileModel object at 0x103bf42b0>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:50:53,885][common_tools.py][52][ERROR][6202896384] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 176, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 157, in search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 14:51:07,007][common_tools.py][51][ERROR][6202896384] - (<models.dataset_model.OperDatasetFileModel object at 0x103c35240>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:51:07,008][common_tools.py][52][ERROR][6202896384] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 176, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 157, in search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 14:52:14,202][common_tools.py][51][ERROR][6157168640] - (<models.dataset_model.OperDatasetFileModel object at 0x107ba4250>, 1754898888113, {'version': '1.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:52:14,205][common_tools.py][52][ERROR][6157168640] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 176, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 157, in search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 14:53:05,055][common_tools.py][51][ERROR][6157168640] - (<models.dataset_model.OperDatasetFileModel object at 0x107bed240>, 1754898888113, {'version': '3.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:53:05,057][common_tools.py][52][ERROR][6157168640] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 176, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 157, in search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 14:53:35,654][common_tools.py][51][ERROR][6171242496] - (<models.dataset_model.OperDatasetFileModel object at 0x106dac2b0>, 1754898888113, {'version': '3.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:53:35,657][common_tools.py][52][ERROR][6171242496] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 177, in get_dataset_files
+    result = self.search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 157, in search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 14:54:09,731][common_tools.py][51][ERROR][6133329920] - (<models.dataset_model.OperDatasetFileModel object at 0x1085a82b0>, 1754898888113, {'version': '3.0', 'page': 1, 'size': 10}): 獲取數據集文件列表失敗
+[2025-08-12 14:54:09,736][common_tools.py][52][ERROR][6133329920] - Traceback (most recent call last):
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1617, in __getattr__
+    return self._index[key][1]
+KeyError: 'dataset_id'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/common/common_tools.py", line 49, in inner
+    return func(*args, **kwargs), True
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 177, in get_dataset_files
+    result = self._search_file_id_list(dataset_id, version, page, size)
+  File "/Users/lidong/Desktop/projects/automl/dataset_service/models/dataset_model.py", line 157, in _search_file_id_list
+    self.model.dataset_id == subquery.c.dataset_id,
+  File "/Users/lidong/anaconda3/envs/automl/lib/python3.10/site-packages/sqlalchemy/sql/base.py", line 1619, in __getattr__
+    raise AttributeError(key) from err
+AttributeError: dataset_id
+
+[2025-08-12 15:11:25,850][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a44f7: type object 'DatasetFiles' has no attribute 'get_by_id'
+[2025-08-12 15:11:25,851][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a44f6: type object 'DatasetFiles' has no attribute 'get_by_id'
+[2025-08-12 15:11:25,851][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a44f8: type object 'DatasetFiles' has no attribute 'get_by_id'
+[2025-08-12 15:11:25,851][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a44f9: type object 'DatasetFiles' has no attribute 'get_by_id'
+[2025-08-12 15:11:25,851][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a44f2: type object 'DatasetFiles' has no attribute 'get_by_id'
+[2025-08-12 15:11:25,851][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a44f1: type object 'DatasetFiles' has no attribute 'get_by_id'
+[2025-08-12 15:11:25,851][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a44f5: type object 'DatasetFiles' has no attribute 'get_by_id'
+[2025-08-12 15:11:25,852][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a44f4: type object 'DatasetFiles' has no attribute 'get_by_id'
+[2025-08-12 15:11:25,852][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a44f3: type object 'DatasetFiles' has no attribute 'get_by_id'
+[2025-08-12 15:11:25,852][dataset_model.py][203][ERROR][6126301184] - 獲取文件信息失敗 6899a1c99261416a872a4410: type object 'DatasetFiles' has no attribute 'get_by_id'

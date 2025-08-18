@@ -1,0 +1,20 @@
+DB:
+  MYSQL:
+    HOST:
+    PORT:
+    DATABASE_NAME:
+    USERNAME:
+    PASSWORD:
+  REDIS:
+    HOST:
+    PORT:
+    DATABASE_NAME:
+    USERNAME:
+    PASSWORD:
+
+CONSTANT:
+  PORT:
+  ALLOW_DATE:
+
+PATH:
+  SQLITE_PATH:

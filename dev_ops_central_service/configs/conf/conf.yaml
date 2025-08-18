@@ -1,0 +1,31 @@
+DB:
+  MYSQL:
+    HOST: localhost
+    PORT: 3306
+    DATABASE_NAME: dev_ops_central
+    USERNAME: root
+    PASSWORD: password
+  REDIS:
+    HOST: localhost  
+    PORT: 6379
+    DATABASE_NAME: 0
+    USERNAME: 
+    PASSWORD: 
+
+CONSTANT:
+  PORT: 5001
+  ALLOW_DATE: 30
+  JWT_SECRET_KEY: Avary88!
+  JWT_ACCESS_TOKEN_EXPIRES: 2592000  # 30天
+  API_TITLE: DevOps Central API Service
+  API_VERSION: v1
+  OPENAPI_VERSION: 3.0.3
+  CORS_ORIGINS: 
+    - http://localhost:5173
+    - http://localhost:3000
+  DEFAULT_PAGE_SIZE: 20
+  MAX_PAGE_SIZE: 100
+
+PATH:
+  LOG_PATH: ./logs
+  UPLOAD_PATH: ./uploads
