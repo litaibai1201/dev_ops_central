@@ -315,21 +315,26 @@ const UserSearch: React.FC<UserSearchProps> = ({
   placeholder = "输入工号或姓名搜索用户",
   disabled = false
 }) => {
-  const handleSearch = async (searchValue: string) => {
-    if (!searchValue.trim()) return;
+  const [searchValue, setSearchValue] = React.useState('');
+
+  const handleSearch = async (value: string) => {
+    if (!value.trim()) return;
     
     try {
       // 模拟搜索用户
       const mockUser: User = {
         id: Date.now().toString(),
-        username: searchValue,
-        email: `${searchValue}@company.com`,
+        username: value.trim(),
+        email: `${value.trim()}@company.com`,
         role: 'user',
         createdAt: '2024-01-01',
         updatedAt: '2024-01-01'
       };
       
       onAddUser(mockUser);
+      
+      // 清空输入框
+      setSearchValue('');
     } catch (error) {
       console.error('搜索用户失败:', error);
     }
@@ -338,6 +343,8 @@ const UserSearch: React.FC<UserSearchProps> = ({
   return (
     <div>
       <Input.Search
+        value={searchValue}
+        onChange={(e) => setSearchValue(e.target.value)}
         placeholder={placeholder}
         enterButton="添加"
         size="large"

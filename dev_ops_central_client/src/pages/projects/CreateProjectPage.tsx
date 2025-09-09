@@ -66,6 +66,15 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
   // 获取用户拥有的群组（只有群主可以创建项目）
   const ownedGroups = userGroups?.filter(group => group.ownerId === user.id) || [];
 
+  // 调试信息
+  console.log('Debug - CreateProjectPage:', {
+    user,
+    userGroups,
+    ownedGroups,
+    groupsLoading,
+    groupsError
+  });
+
   // 初始化项目负责人（默认为群主）
   useEffect(() => {
     if (selectedGroup) {
@@ -80,6 +89,8 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
         employeeId: user.username
       };
       setProjectManagers([ownerManager]);
+    } else {
+      setProjectManagers([]);
     }
   }, [selectedGroup, user]);
 
@@ -116,6 +127,7 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
     if (group) {
       fetchGroupMembers(groupId);
     }
+    // 清空项目负责人，等待 useEffect 重新初始化
     setProjectManagers([]);
   };
 
@@ -143,7 +155,10 @@ const CreateProjectPage: React.FC<CreateProjectPageProps> = ({ user }) => {
 
   // 通过工号添加负责人
   const handleAddByEmployeeId = (addedUser: User) => {
-    const isAlreadyAdded = projectManagers.some(m => m.user.id === addedUser.id);
+    // 检查是否已经添加（根据用户名检查）
+    const isAlreadyAdded = projectManagers.some(m => 
+      m.user.username.toLowerCase() === addedUser.username.toLowerCase()
+    );
     if (isAlreadyAdded) {
       message.warning('该用户已经是项目负责人');
       return;
