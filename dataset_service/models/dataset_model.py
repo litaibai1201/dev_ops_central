@@ -14,16 +14,27 @@ from dbs.mysql_db.model_tables import DatasetModel, DatasetFileModel, ProjectDat
 
 
 class OperDatasetModel:
+    """数据集模型操作类 (优化版本)"""
     
     def __init__(self):
         self.model = DatasetModel
     
     @TryExcept("新增數據集失敗")
     def add(self, data):
+        # 添加数据验证
+        if not data.dataset_nm or not data.dataset_nm.strip():
+            raise ValueError("數據集名稱不能為空")
+        
+        # 检查重名
+        existing = self.model.query.filter_by(dataset_nm=data.dataset_nm.strip()).first()
+        if existing and existing.status == 1:
+            raise ValueError(f"數據集名稱 '{data.dataset_nm}' 已存在")
+            
         db.session.add(data)
         return True
 
     def get_by_id(self, dataset_id, project_id):
+        """根据ID和项目ID获取数据集 (优化版本)"""
         return self.model.query.join(
             ProjectDatasetModel, self.model.id == ProjectDatasetModel.dataset_id
         ).filter(
@@ -33,6 +44,10 @@ class OperDatasetModel:
                 ProjectDatasetModel.status == 1,
                 ProjectDatasetModel.project_id == project_id
             )
+        ).options(
+            # 只加载需要的字段，提高查询性能
+            load_only(self.model.id, self.model.dataset_nm, self.model.description, 
+                     self.model.version, self.model.created_by, self.model.created_at)
         ).first()
     
     @TryExcept("獲取數據集列表失敗")

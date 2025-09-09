@@ -24,7 +24,20 @@ from loggers import logger
 class DatasetController:
     """數據集控制器 (重构优化版本)"""
     
+    # 类级别的单例缓存
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(DatasetController, cls).__new__(cls)
+        return cls._instance
+    
     def __init__(self):
+        # 避免重复初始化
+        if DatasetController._initialized:
+            return
+            
         self.oper_dataset = OperDatasetModel()
         self.oper_file = OperDatasetFileModel()
         self.oper_projectdataset = OperProjectDatasetModel()
@@ -37,6 +50,8 @@ class DatasetController:
         # 初始化缓存
         self._minio_client = None
         self._mongo_connected = False
+        
+        DatasetController._initialized = True
 
     # ==================== 公共验证和初始化方法 ====================
     
@@ -60,18 +75,34 @@ class DatasetController:
         return self._minio_client
     
     def _validate_files(self, files: List) -> Optional[str]:
-        """验证上传文件"""
+        """验证上传文件 (增强版本)"""
         if not files or len(files) == 0:
             return "至少需要上傳一個文件"
             
+        total_size = 0
         for file in files:
             if not file.filename:
-                return "文件名不能為空"
+                continue  # 跳过空文件名，后续处理
             
             # 检查文件扩展名
             file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
             if file_ext not in self.allowed_extensions:
-                return f"不支持的文件類型: {file_ext}"
+                return f"不支持的文件類型: {file_ext}。支持的類型: {', '.join(self.allowed_extensions)}"
+            
+            # 估算文件大小(如果可能)
+            file.seek(0, 2)  # 移动到文件末尾
+            file_size = file.tell()
+            file.seek(0)  # 重置位置
+            
+            if file_size > self.max_file_size:
+                return f"文件 {file.filename} 超過大小限制 ({self.max_file_size // 1024 // 1024}MB)"
+            
+            total_size += file_size
+        
+        # 检查总大小(批量上传限制)
+        max_total_size = self.max_file_size * 10  # 10倍单文件限制
+        if total_size > max_total_size:
+            return f"批量上傳總大小超出限制 ({max_total_size // 1024 // 1024}MB)"
         
         return None
     
