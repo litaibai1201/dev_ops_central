@@ -1,0 +1,42 @@
+2025-09-10 09:42:37,933 - api_gateway - INFO - auth_api.py:277 - API訪問: POST /auth/logout - IP: 127.0.0.1
+2025-09-10 09:46:21,201 - api_gateway - INFO - auth_api.py:277 - API訪問: POST /auth/logout - IP: 127.0.0.1
+2025-09-10 09:48:20,192 - api_gateway - INFO - auth_api.py:277 - API訪問: POST /auth/login - IP: 127.0.0.1
+2025-09-10 09:48:32,866 - api_gateway - INFO - auth_api.py:277 - API訪問: POST /auth/logout - IP: 127.0.0.1
+2025-09-10 10:00:22,361 - api_gateway - INFO - auth_api.py:275 - API訪問: POST /auth/logout - IP: 127.0.0.1
+2025-09-10 10:00:32,085 - api_gateway - INFO - auth_api.py:275 - API訪問: POST /auth/refresh - IP: 127.0.0.1
+2025-09-10 10:00:58,159 - api_gateway - INFO - auth_api.py:275 - API訪問: POST /auth/refresh - IP: 127.0.0.1
+2025-09-10 10:01:03,345 - api_gateway - INFO - auth_api.py:275 - API訪問: POST /auth/register - IP: 127.0.0.1
+2025-09-10 10:01:03,390 - api_gateway - ERROR - common_tools.py:59 - (<models.auth_model.OperUserModel object at 0x1111b00d0>, <UserModel (transient 4632226576)>): 創建用戶失敗, 用戶名已存在
+2025-09-10 10:01:03,393 - api_gateway - ERROR - common_tools.py:60 - Traceback (most recent call last):
+  File "/Users/lidong/Desktop/projects/dev_ops_central/api_gateway_service/common/common_tools.py", line 53, in inner
+    return func(*args, **kwargs), True
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/lidong/Desktop/projects/dev_ops_central/api_gateway_service/models/auth_model.py", line 48, in create_user
+    raise ValueError("用戶名已存在")
+ValueError: 用戶名已存在
+
+2025-09-10 10:01:03,468 - api_gateway - ERROR - auth_controller.py:175 - 用戶註冊失敗: 創建用戶失敗: 創建用戶失敗, 用戶名已存在
+2025-09-10 10:01:03,471 - api_gateway - WARNING - auth_api.py:43 - API操作失败: 用戶註冊失敗: 創建用戶失敗: 創建用戶失敗, 用戶名已存在
+2025-09-10 10:01:06,900 - api_gateway - INFO - auth_api.py:275 - API訪問: POST /auth/login - IP: 127.0.0.1
+2025-09-10 10:01:19,246 - api_gateway - INFO - auth_api.py:275 - API訪問: POST /auth/logout - IP: 127.0.0.1
+2025-09-10 10:01:25,709 - api_gateway - INFO - auth_api.py:275 - API訪問: GET /auth/profile - IP: 127.0.0.1
+2025-09-10 10:41:11,293 - api_gateway - INFO - auth_api.py:276 - API訪問: POST /auth/logout - IP: 127.0.0.1
+2025-09-10 10:43:24,186 - api_gateway - INFO - auth_api.py:273 - API訪問: POST /auth/logout - IP: 127.0.0.1
+2025-09-10 10:43:24,263 - api_gateway - INFO - auth_controller.py:437 - Refresh token已加入黑名單: df721d09-0664-4d5e-a168-e38552d32da8
+2025-09-10 10:43:24,264 - api_gateway - INFO - auth_controller.py:457 - Access token已加入黑名單: aea11918-0fa4-4f89-8d96-d8e517c11d8f
+2025-09-10 10:43:32,044 - api_gateway - INFO - auth_api.py:273 - API訪問: POST /auth/login - IP: 127.0.0.1
+2025-09-10 10:44:06,689 - api_gateway - INFO - auth_api.py:273 - API訪問: POST /auth/logout - IP: 127.0.0.1
+2025-09-10 10:44:06,731 - api_gateway - INFO - auth_controller.py:437 - Refresh token已加入黑名單: 088f8a92-0615-4e25-83a2-c5b592581235
+2025-09-10 10:44:06,732 - api_gateway - INFO - auth_controller.py:457 - Access token已加入黑名單: a9751669-e583-4c29-bfbe-41d5ed11e345
+2025-09-10 10:44:17,507 - api_gateway - INFO - auth_api.py:273 - API訪問: POST /auth/refresh - IP: 127.0.0.1
+2025-09-10 10:44:17,551 - api_gateway - WARNING - auth_api.py:43 - API操作失败: 刷新令牌已過期或無效
+2025-09-10 10:44:32,683 - api_gateway - INFO - auth_api.py:273 - API訪問: GET /auth/profile - IP: 127.0.0.1
+2025-09-10 10:46:40,753 - api_gateway - INFO - auth_api.py:273 - API訪問: POST /auth/login - IP: 127.0.0.1
+2025-09-10 10:46:50,945 - api_gateway - INFO - auth_api.py:273 - API訪問: GET /auth/sessions - IP: 127.0.0.1
+2025-09-10 10:48:17,326 - api_gateway - INFO - auth_api.py:273 - API訪問: DELETE /auth/sessions - IP: 127.0.0.1
+2025-09-10 10:48:24,318 - api_gateway - INFO - auth_api.py:273 - API訪問: GET /auth/sessions - IP: 127.0.0.1
+2025-09-10 10:48:35,267 - api_gateway - INFO - auth_api.py:273 - API訪問: DELETE /auth/sessions - IP: 127.0.0.1
+2025-09-10 10:48:40,930 - api_gateway - INFO - auth_api.py:273 - API訪問: DELETE /auth/sessions - IP: 127.0.0.1
+2025-09-10 10:48:44,391 - api_gateway - INFO - auth_api.py:273 - API訪問: DELETE /auth/sessions - IP: 127.0.0.1
+2025-09-10 10:48:46,173 - api_gateway - INFO - auth_api.py:273 - API訪問: GET /auth/sessions - IP: 127.0.0.1
+2025-09-10 10:49:24,490 - api_gateway - INFO - auth_api.py:273 - API訪問: GET /auth/health - IP: 127.0.0.1
