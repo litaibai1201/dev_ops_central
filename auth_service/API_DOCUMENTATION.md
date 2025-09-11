@@ -1,8 +1,8 @@
-# API Gateway Service - 接口说明文档
+# Auth Service - 接口说明文档
 
 ## 📋 概述
 
-API Gateway Service 是基于 Flask 构建的认证服务，提供用户注册、登录、令牌管理等功能。
+Auth Service 是基于 Flask 构建的认证服务，提供用户管理、权限验证、令牌管理、多因子认证等功能。
 
 - **服务地址**: `http://localhost:25698`
 - **API文档**: `http://localhost:25698/swagger-ui`

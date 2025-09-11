@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# API Gateway Service 启动脚本
+# Auth Service 启动脚本
 
-echo "=== API Gateway Service Starting ==="
+echo "=== Auth Service Starting ==="
 
 # 检查Python环境
 if ! command -v python3 &> /dev/null; then
@@ -29,7 +29,7 @@ fi
 # 创建必要的目录
 mkdir -p logs/{info,error,warn,critical}
 
-echo "Starting API Gateway Service on port 8000..."
+echo "Starting Auth Service on port 8000..."
 echo "Access Swagger UI at: http://localhost:8000/swagger-ui"
 echo "Health check at: http://localhost:8000/auth/health"
 echo "=== Press Ctrl+C to stop ==="

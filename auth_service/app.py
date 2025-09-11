@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 @文件: app.py
-@說明: API Gateway server啟動文件
+@說明: Auth server啟動文件
 @時間: 2025-01-09
 @作者: LiDong
 """
@@ -62,7 +62,7 @@ def check_if_token_revoked(jwt_header, jwt_payload):
 def create_app(app):
     CORS(app, supports_credentials=True)
     app.config["Access-Control-Allow-Origin"] = "*"
-    app.config["API_TITLE"] = "API GATEWAY REST API"
+    app.config["API_TITLE"] = "Auth REST API"
     app.config["API_VERSION"] = "v1"
     app.config["OPENAPI_VERSION"] = "3.0.3"
     app.config["OPENAPI_URL_PREFIX"] = "/"
@@ -148,6 +148,6 @@ def after_request(resp):
 
 if __name__ == "__main__":
     app = create_app(app)
-    print("===================API Gateway starting============================")
+    print("===================Auth starting============================")
     # serve(app, host="0.0.0.0", port=8000, threads=30)
     app.run(SERVER_HOST, SERVER_PORT, debug=True)

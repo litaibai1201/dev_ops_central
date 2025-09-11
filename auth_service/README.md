@@ -1,4 +1,4 @@
-# API Gateway Service
+# Auth Service
 
 基于 Flask 构建的 API 网关服务，提供用户认证和授权功能。
 
