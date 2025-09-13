@@ -83,6 +83,60 @@ class RedisClient:
         if self.redis_client:
             return self.redis_client.flushdb()
         return False
+    
+    def hget(self, name, key):
+        """获取哈希字段值"""
+        if self.redis_client:
+            return self.redis_client.hget(name, key)
+        return None
+    
+    def hset(self, name, key, value):
+        """设置哈希字段值"""
+        if self.redis_client:
+            return self.redis_client.hset(name, key, value)
+        return False
+    
+    def hmget(self, name, keys):
+        """批量获取哈希字段值"""
+        if self.redis_client:
+            return self.redis_client.hmget(name, keys)
+        return None
+    
+    def hmset(self, name, mapping):
+        """批量设置哈希字段值"""
+        if self.redis_client:
+            return self.redis_client.hmset(name, mapping)
+        return False
+    
+    def hgetall(self, name):
+        """获取哈希所有字段"""
+        if self.redis_client:
+            return self.redis_client.hgetall(name)
+        return {}
+    
+    def hdel(self, name, *keys):
+        """删除哈希字段"""
+        if self.redis_client:
+            return self.redis_client.hdel(name, *keys)
+        return False
+    
+    def sadd(self, name, *values):
+        """向集合添加成员"""
+        if self.redis_client:
+            return self.redis_client.sadd(name, *values)
+        return False
+    
+    def sismember(self, name, value):
+        """检查是否为集合成员"""
+        if self.redis_client:
+            return self.redis_client.sismember(name, value)
+        return False
+    
+    def srem(self, name, *values):
+        """从集合移除成员"""
+        if self.redis_client:
+            return self.redis_client.srem(name, *values)
+        return False
 
 
 # 创建全局Redis客户端实例

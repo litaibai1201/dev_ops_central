@@ -29,6 +29,7 @@ from models.auth_model import (
 from configs.constant import Config
 from loggers import logger
 from cache import redis_client
+from cache.token_cache import token_cache
 
 
 class AuthController:
@@ -246,7 +247,7 @@ class AuthController:
                 raise Exception(f"創建用戶失敗: {result}")
             
             # 获取创建的用户信息
-            created_user = self.oper_user.get_by_username(user_data['username'])
+            created_user = self.oper_user.get_by_username(data['username'])
             if not created_user:
                 raise Exception("用戶創建成功但無法獲取用戶信息")
             
@@ -328,6 +329,29 @@ class AuthController:
                 if not attempt_flag:
                     logger.warning(f"記錄成功登錄失敗: {attempt_result}")
                 
+                # 缓存用户信息以提高后续访问性能
+                user_info = {
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'display_name': user.display_name,
+                    'status': user.status,
+                    'email_verified': user.email_verified,
+                    'two_factor_enabled': user.two_factor_enabled,
+                    'avatar_url': user.avatar_url
+                }
+                token_cache.cache_user_info(str(user.id), user_info)
+                
+                # 缓存会话信息
+                session_info = {
+                    'session_id': session_id,
+                    'user_id': user.id,
+                    'device_info': client_info['device_info'],
+                    'ip_address': client_info['ip_address'],
+                    'is_active': True
+                }
+                token_cache.cache_session_info(session_id, session_info)
+                
                 return {
                     'access_token': access_token,
                     'refresh_token': refresh_token,
@@ -362,20 +386,15 @@ class AuthController:
                 traceback.print_exc()
                 return "刷新令牌無效", False
             
-            # 检查令牌记录
+            # 检查会话记录
             token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
-            print(f"Debug: token_hash = {token_hash}")
-            token_record = self.oper_refresh_token.get_by_token_hash(token_hash)
-            print(f"Debug: token_record = {token_record}")
+            session_record = self.oper_session.get_session_by_refresh_token_hash(token_hash)
             
-            if not token_record:
-                print("Debug: No token record found")
+            if not session_record:
                 return "刷新令牌已過期或無效", False
             
-            is_valid = self.oper_refresh_token.is_token_valid(token_record)
-            print(f"Debug: is_token_valid = {is_valid}")
+            is_valid = self.oper_session.is_session_valid(session_record)
             if not is_valid:
-                print(f"Debug: Token invalid - status: {token_record.status}, is_revoked: {token_record.is_revoked}, expires_at: {token_record.expires_at}")
                 return "刷新令牌已過期或無效", False
             
             # 获取用户信息
@@ -457,50 +476,33 @@ class AuthController:
     def logout(self, refresh_token: str, access_token: str = None) -> Tuple[Any, bool]:
         """用户登出"""
         try:
-            # 撤销刷新令牌
+            # 撤销用户会话
             token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
-            token_record = self.oper_refresh_token.get_by_token_hash(token_hash)
+            session_record = self.oper_session.get_session_by_refresh_token_hash(token_hash)
             
             def _logout_transaction():
-                # 撤销refresh token
-                if token_record:
-                    revoke_result, revoke_flag = self.oper_refresh_token.revoke_token(token_record)
+                # 撤销会话
+                if session_record:
+                    revoke_result, revoke_flag = self.oper_session.revoke_session(session_record)
                     if not revoke_flag:
-                        raise Exception(f"撤銷刷新令牌失敗: {revoke_result}")
-                
-                # 将refresh token加入黑名单
-                try:
-                    refresh_token_data = decode_token(refresh_token)
-                    refresh_jti = refresh_token_data.get('jti')
-                    refresh_exp = refresh_token_data.get('exp')
+                        raise Exception(f"撤銷會話失敗: {revoke_result}")
                     
-                    if refresh_jti and refresh_exp:
-                        import time
-                        remaining_time = refresh_exp - int(time.time())
-                        if remaining_time > 0:
-                            blacklist_key = f"blacklisted_token:{refresh_jti}"
-                            redis_client.setex(blacklist_key, remaining_time, "revoked")
-                            logger.info(f"Refresh token已加入黑名單: {refresh_jti}")
+                    # 清除会话缓存
+                    self.invalidate_session_cache(session_record.id)
+                
+                # 使用令牌缓存服务将tokens加入黑名单
+                try:
+                    # 将refresh token加入黑名单
+                    token_cache.add_token_to_blacklist(refresh_token)
+                    logger.info("Refresh token已加入黑名單")
                 except Exception as e:
                     logger.warning(f"撤銷refresh token黑名單失敗: {str(e)}")
                 
                 # 如果提供了access token，将其加入黑名单
                 if access_token:
                     try:
-                        # 解析access token获取jti和过期时间
-                        access_token_data = decode_token(access_token)
-                        jti = access_token_data.get('jti')
-                        exp = access_token_data.get('exp')
-                        
-                        if jti and exp:
-                            # 计算token剩余有效时间
-                            import time
-                            remaining_time = exp - int(time.time())
-                            if remaining_time > 0:
-                                # 将token jti加入Redis黑名单，过期时间设置为token的剩余有效时间
-                                blacklist_key = f"blacklisted_token:{jti}"
-                                redis_client.setex(blacklist_key, remaining_time, "revoked")
-                                logger.info(f"Access token已加入黑名單: {jti}")
+                        token_cache.add_token_to_blacklist(access_token)
+                        logger.info("Access token已加入黑名單")
                     except Exception as e:
                         logger.warning(f"撤銷access token失敗: {str(e)}")
                         # 不影响整体logout流程
@@ -520,20 +522,20 @@ class AuthController:
             active_sessions = self.oper_session.get_active_sessions_by_user(user_id)
             
             sessions_data = []
-            for token in active_tokens:
+            for session in active_sessions:
                 # 检测是否为当前会话
                 is_current = False
-                if current_token_hash and token.token_hash == current_token_hash:
+                if current_token_hash and session.refresh_token_hash == current_token_hash:
                     is_current = True
                 
                 session_info = {
-                    'token_id': token.id,
-                    'device_info': token.device_info or "未知設備",
-                    'ip_address': token.ip_address or "未知IP",
-                    'created_at': token.created_at,
-                    'expires_at': token.expires_at,
+                    'session_id': session.id,
+                    'device_info': session.device_info.get('type', '未知設備') if session.device_info else '未知設備',
+                    'ip_address': session.ip_address or "未知IP",
+                    'created_at': session.created_at,
+                    'expires_at': session.expires_at,
                     'is_current': is_current,
-                    'status': '活躍' if self.oper_refresh_token.is_token_valid(token) else '已過期'
+                    'status': '活躍' if self.oper_session.is_session_valid(session) else '已過期'
                 }
                 sessions_data.append(session_info)
             
@@ -553,25 +555,22 @@ class AuthController:
             logger.error(f"獲取用戶會話列表異常: {str(e)}")
             return "獲取會話列表失敗", False
     
-    def revoke_user_session(self, user_id: int, token_id: int) -> Tuple[Any, bool]:
+    def revoke_user_session(self, user_id: int, session_id: str) -> Tuple[Any, bool]:
         """撤销指定用户会话"""
         try:
-            # 获取令牌记录
-            token_record = None
-            active_tokens = self.oper_refresh_token.get_active_tokens_by_user(user_id)
+            # 获取会话记录
+            session_record = self.oper_session.get_session_by_id(session_id)
             
-            for token in active_tokens:
-                if token.id == token_id:
-                    token_record = token
-                    break
-            
-            if not token_record:
+            if not session_record or session_record.user_id != user_id:
                 return "會話不存在或已失效", False
             
             def _revoke_session_transaction():
-                revoke_result, revoke_flag = self.oper_refresh_token.revoke_token(token_record)
+                revoke_result, revoke_flag = self.oper_session.revoke_session(session_record)
                 if not revoke_flag:
                     raise Exception(f"撤銷會話失敗: {revoke_result}")
+                
+                # 清除相关缓存
+                self.invalidate_session_cache(session_id)
                 
                 return f"會話已成功撤銷"
             
@@ -580,6 +579,60 @@ class AuthController:
         except Exception as e:
             logger.error(f"撤銷用戶會話異常: {str(e)}")
             return "撤銷會話失敗", False
+    
+    # ==================== 数据一致性保障方法 ====================
+    
+    def ensure_cache_consistency_on_user_update(self, user_id: str) -> bool:
+        """用户信息更新后确保缓存一致性"""
+        try:
+            # 清除用户相关的所有缓存
+            self.invalidate_user_cache(user_id)
+            
+            # 清除该用户所有会话的缓存
+            sessions = self.oper_session.get_active_sessions_by_user(user_id)
+            for session in sessions:
+                self.invalidate_session_cache(session.id)
+            
+            # 清除该用户的令牌验证缓存 - 通过键模式匹配
+            try:
+                # 这里需要Redis支持清除模式匹配的键
+                redis_keys = redis_client.redis_client.keys(f"auth:token:*")
+                for key in redis_keys:
+                    cached_data = redis_client.get(key)
+                    if cached_data:
+                        import json
+                        try:
+                            cache_info = json.loads(cached_data)
+                            if cache_info.get('result', {}).get('user_id') == user_id:
+                                redis_client.delete(key)
+                        except (json.JSONDecodeError, KeyError):
+                            continue
+            except Exception as e:
+                logger.warning(f"清除令牌验证缓存失败: {str(e)}")
+            
+            return True
+        except Exception as e:
+            logger.error(f"确保缓存一致性失败: {str(e)}")
+            return False
+    
+    def ensure_cache_consistency_on_session_update(self, session_id: str) -> bool:
+        """会话更新后确保缓存一致性"""
+        try:
+            # 清除会话缓存
+            self.invalidate_session_cache(session_id)
+            
+            # 获取会话信息并清除相关的令牌缓存
+            session = self.oper_session.get_session_by_id(session_id)
+            if session:
+                # 清除与该会话相关的令牌验证缓存
+                token_hash = session.refresh_token_hash
+                token_cache_key = f"auth:token:{hashlib.sha256(token_hash.encode()).hexdigest()}"
+                redis_client.delete(token_cache_key)
+            
+            return True
+        except Exception as e:
+            logger.error(f"确保会话缓存一致性失败: {str(e)}")
+            return False
     
     # ==================== 新增的功能方法 ====================
     
@@ -728,6 +781,9 @@ class AuthController:
                 if not flag:
                     raise Exception(f"驗證郵箱失敗: {result}")
                 
+                # 使用户缓存失效，因为状态已改变
+                self.invalidate_user_cache(user.id)
+                
                 return "郵箱驗證成功"
             
             return self._execute_with_transaction(_verify_email_transaction, "驗證郵箱")
@@ -755,6 +811,9 @@ class AuthController:
                 result, flag = self.oper_user.setup_two_factor(user, secret, backup_codes)
                 if not flag:
                     raise Exception(f"設置雙重認證失敗: {result}")
+                
+                # 使用户缓存失效，因为2FA状态已改变
+                self.invalidate_user_cache(user.id)
                 
                 return {
                     'secret': secret,
@@ -827,68 +886,262 @@ class AuthController:
             return "禁用雙重認證失敗", False
     
     def validate_token_internal(self, token: str) -> Tuple[Any, bool]:
-        """内部服务验证令牌"""
+        """内部服务验证令牌 - 超低延迟Redis缓存版本"""
         try:
-            # 解析JWT令牌
+            # 第1层：检查缓存的验证结果 (< 1ms)
+            cached_result = token_cache.get_cached_token_validation(token)
+            if cached_result:
+                return cached_result, True
+            
+            # 第2层：快速黑名单检查 (< 1ms)
+            if token_cache.is_token_blacklisted(token):
+                error_result = "令牌已被撤銷"
+                # 缓存失败结果，避免重复验证
+                token_cache.cache_token_validation(token, error_result, ttl=60)
+                return error_result, False
+            
+            # 第3层：解析JWT令牌
             try:
                 token_data = decode_token(token)
                 user_id = token_data['sub']
                 session_id = token_data.get('session_id')
+                exp = token_data.get('exp', 0)
+                
+                # 检查令牌是否已过期
+                import time
+                if time.time() >= exp:
+                    error_result = "令牌已過期"
+                    token_cache.cache_token_validation(token, error_result, ttl=60)
+                    return error_result, False
+                    
             except Exception:
-                return "令牌無效", False
+                error_result = "令牌格式無效"
+                token_cache.cache_token_validation(token, error_result, ttl=60)
+                return error_result, False
             
-            # 检查用户是否存在
-            user = self.oper_user.get_by_id(user_id)
-            if not user:
-                return "用戶不存在", False
-            
-            # 检查会话是否有效
-            if session_id:
-                session = self.oper_session.get_by_session_token(session_id)
-                if not session or not self.oper_session.is_session_valid(session):
-                    return "會話無效", False
-            
-            # 检查令牌是否在黑名单中
-            jti = token_data.get('jti')
-            if jti:
-                blacklist_key = f"blacklisted_token:{jti}"
-                if redis_client.get(blacklist_key):
-                    return "令牌已被撤銷", False
-            
-            return {
-                'valid': True,
-                'user_id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'status': user.status
-            }, True
-            
-        except Exception as e:
-            logger.error(f"驗證令牌異常: {str(e)}")
-            return "驗證令牌失敗", False
-    
-    def get_user_batch(self, user_ids: List[str]) -> Tuple[Any, bool]:
-        """批量获取用户信息"""
-        try:
-            users = self.oper_user.get_users_by_ids(user_ids)
-            
-            users_data = []
-            for user in users:
-                users_data.append({
+            # 第4层：检查缓存的用户信息 (< 1ms)
+            cached_user = token_cache.get_cached_user_info(user_id)
+            if cached_user:
+                user_info = cached_user
+                # 检查用户状态
+                if user_info.get('status') not in ['active', 'pending_verification']:
+                    error_result = f"用戶狀態異常: {user_info.get('status')}"
+                    token_cache.cache_token_validation(token, error_result, ttl=60)
+                    return error_result, False
+            else:
+                # 第5层：数据库查询用户 (仅在缓存未命中时)
+                user = self.oper_user.get_by_id(user_id)
+                if not user:
+                    error_result = "用戶不存在"
+                    token_cache.cache_token_validation(token, error_result, ttl=60)
+                    return error_result, False
+                
+                # 检查用户状态
+                if user.status not in ['active', 'pending_verification']:
+                    error_result = f"用戶狀態異常: {user.status}"
+                    token_cache.cache_token_validation(token, error_result, ttl=60)
+                    return error_result, False
+                
+                # 构建用户信息并缓存
+                user_info = {
                     'user_id': user.id,
                     'username': user.username,
                     'email': user.email,
-                    'display_name': user.display_name,
-                    'avatar_url': user.avatar_url,
                     'status': user.status,
-                    'created_at': user.created_at
-                })
+                    'display_name': user.display_name,
+                    'avatar_url': user.avatar_url
+                }
+                
+                # 异步缓存用户信息，不影响响应时间
+                try:
+                    token_cache.cache_user_info(user_id, user_info)
+                except Exception as cache_error:
+                    logger.warning(f"缓存用户信息失败: {str(cache_error)}")
+            
+            # 第6层：检查会话有效性（如果有session_id）
+            if session_id:
+                # 检查缓存的会话信息
+                cached_session = token_cache.get_cached_session_info(session_id)
+                if cached_session:
+                    session_info = cached_session
+                    if not session_info.get('is_valid', False):
+                        error_result = "會話已失效"
+                        token_cache.cache_token_validation(token, error_result, ttl=60)
+                        return error_result, False
+                else:
+                    # 数据库查询会话（仅在缓存未命中时）
+                    session = self.oper_session.get_by_session_token(session_id)
+                    if not session or not self.oper_session.is_session_valid(session):
+                        error_result = "會話無效"
+                        token_cache.cache_token_validation(token, error_result, ttl=60)
+                        return error_result, False
+                    
+                    # 构建会话信息并缓存
+                    session_info = {
+                        'session_id': session.id,
+                        'user_id': session.user_id,
+                        'is_valid': True,
+                        'expires_at': session.expires_at.isoformat() if session.expires_at else None
+                    }
+                    
+                    # 异步缓存会话信息
+                    try:
+                        token_cache.cache_session_info(session_id, session_info)
+                    except Exception as cache_error:
+                        logger.warning(f"缓存会话信息失败: {str(cache_error)}")
+            
+            # 构建成功的验证结果
+            validation_result = {
+                'valid': True,
+                'user_id': user_info['user_id'],
+                'username': user_info['username'],
+                'email': user_info['email'],
+                'status': user_info['status'],
+                'display_name': user_info.get('display_name'),
+                'avatar_url': user_info.get('avatar_url'),
+                'session_id': session_id
+            }
+            
+            # 缓存成功的验证结果
+            # 计算合适的TTL：不超过令牌剩余有效期
+            remaining_time = exp - int(time.time())
+            cache_ttl = min(remaining_time, token_cache.TOKEN_CACHE_TTL)
+            
+            try:
+                token_cache.cache_token_validation(token, validation_result, ttl=cache_ttl)
+            except Exception as cache_error:
+                logger.warning(f"缓存令牌验证结果失败: {str(cache_error)}")
+            
+            return validation_result, True
+            
+        except Exception as e:
+            logger.error(f"驗證令牌異常: {str(e)}")
+            # 缓存失败结果，避免重复处理异常
+            try:
+                token_cache.cache_token_validation(token, "驗證令牌失敗", ttl=60)
+            except:
+                pass
+            return "驗證令牌失敗", False
+    
+    def get_user_batch(self, user_ids: List[str]) -> Tuple[Any, bool]:
+        """批量获取用户信息 - 缓存优化版本"""
+        try:
+            # 第1层：批量检查缓存
+            cached_users = token_cache.batch_get_users(user_ids)
+            cached_user_ids = set(cached_users.keys())
+            missing_user_ids = [uid for uid in user_ids if uid not in cached_user_ids]
+            
+            users_data = []
+            
+            # 添加缓存命中的用户数据
+            for user_id in user_ids:
+                if user_id in cached_users:
+                    users_data.append(cached_users[user_id])
+            
+            # 第2层：查询缺失的用户数据
+            if missing_user_ids:
+                db_users = self.oper_user.get_users_by_ids(missing_user_ids)
+                
+                # 构建用户数据并准备缓存
+                db_users_cache_data = {}
+                for user in db_users:
+                    user_info = {
+                        'user_id': user.id,
+                        'username': user.username,
+                        'email': user.email,
+                        'display_name': user.display_name,
+                        'avatar_url': user.avatar_url,
+                        'status': user.status,
+                        'created_at': user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at)
+                    }
+                    
+                    users_data.append(user_info)
+                    db_users_cache_data[user.id] = user_info
+                
+                # 批量缓存新查询的用户数据
+                if db_users_cache_data:
+                    try:
+                        token_cache.batch_cache_users(db_users_cache_data)
+                    except Exception as cache_error:
+                        logger.warning(f"批量缓存用户信息失败: {str(cache_error)}")
+            
+            # 按原始顺序返回用户数据
+            ordered_users_data = []
+            users_dict = {user['user_id']: user for user in users_data}
+            
+            for user_id in user_ids:
+                if user_id in users_dict:
+                    ordered_users_data.append(users_dict[user_id])
             
             return {
-                'users': users_data,
-                'total': len(users_data)
+                'users': ordered_users_data,
+                'total': len(ordered_users_data),
+                'cache_hits': len(cached_user_ids),
+                'db_queries': len(missing_user_ids)
             }, True
             
         except Exception as e:
             logger.error(f"批量獲取用戶信息異常: {str(e)}")
             return "獲取用戶信息失敗", False
+    
+    # ==================== 缓存管理方法 ====================
+    
+    def invalidate_user_cache(self, user_id: str) -> bool:
+        """使用户缓存失效 - 在用户信息更新时调用"""
+        try:
+            return token_cache.invalidate_user_cache(user_id)
+        except Exception as e:
+            logger.error(f"使用户缓存失效异常: {str(e)}")
+            return False
+    
+    def invalidate_session_cache(self, session_id: str) -> bool:
+        """使会话缓存失效 - 在会话状态更新时调用"""
+        try:
+            return token_cache.invalidate_session_cache(session_id)
+        except Exception as e:
+            logger.error(f"使会话缓存失效异常: {str(e)}")
+            return False
+    
+    def get_cache_stats(self) -> Tuple[Any, bool]:
+        """获取缓存统计信息"""
+        try:
+            stats = token_cache.get_cache_stats()
+            return stats, True
+        except Exception as e:
+            logger.error(f"获取缓存统计异常: {str(e)}")
+            return "获取缓存统计失败", False
+    
+    def warm_up_cache(self, user_ids: List[str] = None, limit: int = 100) -> Tuple[Any, bool]:
+        """缓存预热 - 预先加载热点用户数据"""
+        try:
+            warmed_users = 0
+            
+            if user_ids:
+                # 预热指定用户
+                target_user_ids = user_ids[:limit]
+            else:
+                # 预热最近活跃的用户
+                # 这里可以根据实际需求查询最近登录的用户
+                recent_users = self.oper_user.model.query.filter(
+                    self.oper_user.model.last_login_at.isnot(None)
+                ).order_by(
+                    self.oper_user.model.last_login_at.desc()
+                ).limit(limit).all()
+                
+                target_user_ids = [user.id for user in recent_users]
+            
+            if target_user_ids:
+                # 批量获取用户信息（这会自动缓存）
+                result, flag = self.get_user_batch(target_user_ids)
+                if flag:
+                    warmed_users = len(result.get('users', []))
+            
+            return {
+                'warmed_users': warmed_users,
+                'target_count': len(target_user_ids) if target_user_ids else 0,
+                'message': f'成功预热{warmed_users}个用户的缓存'
+            }, True
+            
+        except Exception as e:
+            logger.error(f"缓存预热异常: {str(e)}")
+            return "缓存预热失败", False

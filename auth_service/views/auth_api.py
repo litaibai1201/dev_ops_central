@@ -530,6 +530,78 @@ class OAuthCallbackApi(BaseAuthView):
             return fail_response_result(msg="系統內部錯誤，請稍後重試")
 
 
+# ==================== 缓存管理API (内部使用) ====================
+
+@blp.route("/internal/cache/stats")
+class CacheStatsApi(BaseAuthView):
+    """缓存统计API"""
+
+    @blp.response(200, RspMsgDictSchema)
+    def get(self):
+        """获取缓存统计信息"""
+        try:
+            result, flag = self.ac.get_cache_stats()
+            return self._build_response(result, flag, "獲取緩存統計成功")
+        except Exception as e:
+            logger.error(f"獲取緩存統計異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/internal/cache/warm-up")
+class CacheWarmUpApi(BaseAuthView):
+    """缓存预热API"""
+
+    @blp.response(200, RspMsgDictSchema)
+    def post(self):
+        """缓存预热"""
+        try:
+            # 可以从请求参数获取用户ID列表和限制数量
+            user_ids = request.json.get('user_ids') if request.json else None
+            limit = request.json.get('limit', 100) if request.json else 100
+            
+            result, flag = self.ac.warm_up_cache(user_ids, limit)
+            return self._build_response(result, flag, "緩存預熱成功")
+        except Exception as e:
+            logger.error(f"緩存預熱異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/internal/cache/invalidate-user/<user_id>")
+class CacheInvalidateUserApi(BaseAuthView):
+    """用户缓存失效API"""
+
+    @blp.response(200, RspMsgSchema)
+    def delete(self, user_id):
+        """使用户缓存失效"""
+        try:
+            success = self.ac.invalidate_user_cache(user_id)
+            if success:
+                return response_result(msg=f"用戶 {user_id} 緩存已清除")
+            else:
+                return fail_response_result(msg="清除用戶緩存失敗")
+        except Exception as e:
+            logger.error(f"清除用戶緩存異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/internal/cache/invalidate-session/<session_id>")
+class CacheInvalidateSessionApi(BaseAuthView):
+    """会话缓存失效API"""
+
+    @blp.response(200, RspMsgSchema)
+    def delete(self, session_id):
+        """使会话缓存失效"""
+        try:
+            success = self.ac.invalidate_session_cache(session_id)
+            if success:
+                return response_result(msg=f"會話 {session_id} 緩存已清除")
+            else:
+                return fail_response_result(msg="清除會話緩存失敗")
+        except Exception as e:
+            logger.error(f"清除會話緩存異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
 # 错误处理器
 @blp.errorhandler(401)
 def handle_unauthorized(error):
