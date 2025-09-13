@@ -16,7 +16,10 @@ from controllers.auth_controller import AuthController
 from serializes.response_serialize import (RspMsgDictSchema, RspMsgSchema)
 from serializes.auth_serialize import (
     UserRegisterSchema, UserLoginSchema, TokenRefreshRequestSchema,
-    SessionRevokeSchema
+    SessionRevokeSchema, ForgotPasswordSchema, ResetPasswordSchema,
+    ChangePasswordSchema, EmailVerificationSchema, TwoFactorSetupSchema,
+    TwoFactorVerifySchema, TwoFactorDisableSchema, InternalTokenValidateSchema,
+    UserBatchRequestSchema
 )
 from common.common_tools import CommonTools
 from loggers import logger
@@ -233,6 +236,298 @@ class AuthHealthApi(MethodView):
             return fail_response_result(content=health_data, msg="服務異常")
         else:
             return response_result(content=health_data, msg="服務正常")
+
+
+# ==================== 密码管理API ====================
+
+@blp.route("/auth/forgot-password")
+class ForgotPasswordApi(BaseAuthView):
+    """忘记密码API"""
+
+    @blp.arguments(ForgotPasswordSchema)
+    @blp.response(200, RspMsgDictSchema)
+    def post(self, payload):
+        """忘记密码"""
+        try:
+            email = payload.get('email')
+            result, flag = self.ac.forgot_password(email)
+            return self._build_response(result, flag, "處理成功")
+        except Exception as e:
+            logger.error(f"忘記密碼異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/reset-password")
+class ResetPasswordApi(BaseAuthView):
+    """重置密码API"""
+
+    @blp.arguments(ResetPasswordSchema)
+    @blp.response(200, RspMsgSchema)
+    def post(self, payload):
+        """重置密码"""
+        try:
+            token = payload.get('token')
+            new_password = payload.get('new_password')
+            result, flag = self.ac.reset_password(token, new_password)
+            return self._build_response(result, flag, "密碼重置成功")
+        except Exception as e:
+            logger.error(f"重置密碼異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/change-password")
+class ChangePasswordApi(BaseAuthView):
+    """修改密码API"""
+
+    @jwt_required()
+    @blp.arguments(ChangePasswordSchema)
+    @blp.response(200, RspMsgSchema)
+    def put(self, payload):
+        """修改密码"""
+        try:
+            current_user_id = get_jwt_identity()
+            old_password = payload.get('old_password')
+            new_password = payload.get('new_password')
+            
+            result, flag = self.ac.change_password(current_user_id, old_password, new_password)
+            return self._build_response(result, flag, "密碼修改成功")
+        except Exception as e:
+            logger.error(f"修改密碼異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+# ==================== 邮箱验证API ====================
+
+@blp.route("/auth/send-verification")
+class SendVerificationEmailApi(BaseAuthView):
+    """发送验证邮件API"""
+
+    @jwt_required()
+    @blp.response(200, RspMsgDictSchema)
+    def post(self):
+        """发送验证邮件"""
+        try:
+            current_user_id = get_jwt_identity()
+            result, flag = self.ac.send_verification_email(current_user_id)
+            return self._build_response(result, flag, "驗證郵件已發送")
+        except Exception as e:
+            logger.error(f"發送驗證郵件異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/verify-email")
+class VerifyEmailApi(BaseAuthView):
+    """验证邮箱API"""
+
+    @blp.arguments(EmailVerificationSchema)
+    @blp.response(200, RspMsgSchema)
+    def post(self, payload):
+        """验证邮箱"""
+        try:
+            token = payload.get('token')
+            result, flag = self.ac.verify_email(token)
+            return self._build_response(result, flag, "郵箱驗證成功")
+        except Exception as e:
+            logger.error(f"驗證郵箱異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+# ==================== 双重认证API ====================
+
+@blp.route("/auth/2fa/setup")
+class TwoFactorSetupApi(BaseAuthView):
+    """设置双重认证API"""
+
+    @jwt_required()
+    @blp.response(200, RspMsgDictSchema)
+    def post(self):
+        """设置双重认证"""
+        try:
+            current_user_id = get_jwt_identity()
+            result, flag = self.ac.setup_two_factor(current_user_id)
+            return self._build_response(result, flag, "雙重認證設置成功")
+        except Exception as e:
+            logger.error(f"設置雙重認證異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/2fa/verify")
+class TwoFactorVerifyApi(BaseAuthView):
+    """验证双重认证API"""
+
+    @jwt_required()
+    @blp.arguments(TwoFactorVerifySchema)
+    @blp.response(200, RspMsgSchema)
+    def post(self, payload):
+        """验证双重认证"""
+        try:
+            current_user_id = get_jwt_identity()
+            token = payload.get('token')
+            result, flag = self.ac.verify_two_factor(current_user_id, token)
+            return self._build_response(result, flag, "雙重認證驗證成功")
+        except Exception as e:
+            logger.error(f"驗證雙重認證異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/2fa/disable")
+class TwoFactorDisableApi(BaseAuthView):
+    """禁用双重认证API"""
+
+    @jwt_required()
+    @blp.arguments(TwoFactorDisableSchema)
+    @blp.response(200, RspMsgSchema)
+    def post(self, payload):
+        """禁用双重认证"""
+        try:
+            current_user_id = get_jwt_identity()
+            password = payload.get('password')
+            result, flag = self.ac.disable_two_factor(current_user_id, password)
+            return self._build_response(result, flag, "雙重認證已禁用")
+        except Exception as e:
+            logger.error(f"禁用雙重認證異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/2fa/backup-codes")
+class TwoFactorBackupCodesApi(BaseAuthView):
+    """获取备用验证码API"""
+
+    @jwt_required()
+    @blp.response(200, RspMsgDictSchema)
+    def get(self):
+        """获取备用验证码"""
+        try:
+            current_user_id = get_jwt_identity()
+            result, flag = self.ac.get_profile(current_user_id)
+            
+            if not flag:
+                return self._build_response(result, flag)
+            
+            # 只返回备用码信息，不返回完整用户信息
+            user_info = result.get('user_info', {})
+            backup_codes = []  # 从数据库获取的备用码，这里需要从用户信息中提取
+            
+            backup_result = {
+                'backup_codes': backup_codes,
+                'remaining_codes': len(backup_codes)
+            }
+            
+            return self._build_response(backup_result, True, "獲取備用碼成功")
+        except Exception as e:
+            logger.error(f"獲取備用碼異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+# ==================== 内部服务API ====================
+
+@blp.route("/internal/validate-token")
+class InternalTokenValidateApi(BaseAuthView):
+    """内部服务验证令牌API"""
+
+    @blp.arguments(InternalTokenValidateSchema)
+    @blp.response(200, RspMsgDictSchema)
+    def post(self, payload):
+        """验证令牌"""
+        try:
+            token = payload.get('token')
+            result, flag = self.ac.validate_token_internal(token)
+            return self._build_response(result, flag, "令牌驗證成功")
+        except Exception as e:
+            logger.error(f"內部服務驗證令牌異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/internal/user/<user_id>")
+class InternalUserInfoApi(BaseAuthView):
+    """内部服务获取用户信息API"""
+
+    @blp.response(200, RspMsgDictSchema)
+    def get(self, user_id):
+        """获取用户信息"""
+        try:
+            result, flag = self.ac.get_profile(user_id)
+            if flag and result.get('user_info'):
+                # 只返回基本用户信息，不返回敏感信息
+                user_info = result['user_info']
+                clean_result = {
+                    'user_id': user_info.get('user_id'),
+                    'username': user_info.get('username'),
+                    'email': user_info.get('email'),
+                    'display_name': user_info.get('display_name'),
+                    'status': user_info.get('status'),
+                    'avatar_url': user_info.get('avatar_url'),
+                    'created_at': user_info.get('created_at')
+                }
+                return self._build_response(clean_result, flag, "獲取用戶信息成功")
+            return self._build_response(result, flag)
+        except Exception as e:
+            logger.error(f"內部服務獲取用戶信息異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/internal/user/batch")
+class InternalUserBatchApi(BaseAuthView):
+    """内部服务批量获取用户信息API"""
+
+    @blp.arguments(UserBatchRequestSchema)
+    @blp.response(200, RspMsgDictSchema)
+    def get(self, payload):
+        """批量获取用户信息"""
+        try:
+            user_ids = payload.get('user_ids', [])
+            result, flag = self.ac.get_user_batch(user_ids)
+            return self._build_response(result, flag, "批量獲取用戶信息成功")
+        except Exception as e:
+            logger.error(f"內部服務批量獲取用戶信息異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+# ==================== OAuth API (预留接口) ====================
+
+@blp.route("/auth/oauth/<provider>/url")
+class OAuthUrlApi(BaseAuthView):
+    """获取OAuth授权URL API"""
+
+    @blp.response(200, RspMsgDictSchema)
+    def get(self, provider):
+        """获取OAuth授权URL"""
+        try:
+            # TODO: 实现OAuth授权URL生成逻辑
+            result = {
+                'provider': provider,
+                'authorization_url': f'https://oauth.example.com/{provider}/authorize',
+                'state': 'random_state_string',
+                'message': 'OAuth授权URL已生成'
+            }
+            return response_result(content=result, msg="獲取授權URL成功")
+        except Exception as e:
+            logger.error(f"獲取OAuth授權URL異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/oauth/<provider>/callback")
+class OAuthCallbackApi(BaseAuthView):
+    """OAuth回调处理API"""
+
+    @blp.response(200, RspMsgDictSchema)
+    def post(self, provider):
+        """OAuth回调处理"""
+        try:
+            # TODO: 实现OAuth回调处理逻辑
+            result = {
+                'provider': provider,
+                'message': 'OAuth回调处理成功',
+                'user_info': {
+                    'provider_user_id': 'example_id',
+                    'email': 'user@example.com',
+                    'display_name': 'Example User'
+                }
+            }
+            return response_result(content=result, msg="OAuth回調處理成功")
+        except Exception as e:
+            logger.error(f"OAuth回調處理異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
 
 
 # 错误处理器

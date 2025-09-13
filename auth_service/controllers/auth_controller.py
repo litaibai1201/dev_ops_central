@@ -7,16 +7,25 @@
 """
 
 import hashlib
+import secrets
+import uuid
 import traceback
 from datetime import datetime, timedelta
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Dict, Any, Optional, List
 from flask import request, g
 from flask_jwt_extended import create_access_token, create_refresh_token, decode_token
+from sqlalchemy import and_, or_, func
 
 from common.common_tools import CommonTools
 from dbs.mysql_db import DBFunction
-from dbs.mysql_db.model_tables import UserModel, RefreshTokenModel, LoginLogModel
-from models.auth_model import OperUserModel, OperRefreshTokenModel, OperLoginLogModel
+from dbs.mysql_db.model_tables import (
+    UserModel, UserSessionModel, UserRoleModel, UserRoleAssignmentModel,
+    LoginAttemptModel, OAuthProviderModel, UserOAuthAccountModel
+)
+from models.auth_model import (
+    OperUserModel, OperUserSessionModel, OperUserRoleModel,
+    OperLoginAttemptModel, OperOAuthProviderModel
+)
 from configs.constant import Config
 from loggers import logger
 from cache import redis_client
@@ -40,8 +49,10 @@ class AuthController:
             return
             
         self.oper_user = OperUserModel()
-        self.oper_refresh_token = OperRefreshTokenModel()
-        self.oper_login_log = OperLoginLogModel()
+        self.oper_session = OperUserSessionModel()
+        self.oper_role = OperUserRoleModel()
+        self.oper_login_attempt = OperLoginAttemptModel()
+        self.oper_oauth = OperOAuthProviderModel()
         
         # 配置项
         self.max_login_attempts = Config.MAX_LOGIN_ATTEMPTS
@@ -92,72 +103,88 @@ class AuthController:
             return "郵箱格式不正確"
         return None
     
-    def _is_account_locked(self, user_id):
+    def _is_account_locked(self, user):
         """检查账户是否被锁定"""
-        cache_key = f"failed_attempts:{user_id}"
+        # 检查数据库中的锁定状态
+        if self.oper_user.is_account_locked(user):
+            return True
+            
+        # 检查缓存中的失败尝试次数
+        cache_key = f"failed_attempts:{user.id}"
         attempts = redis_client.get(cache_key)
         
         if attempts and int(attempts) >= self.max_login_attempts:
             return True
         
-        # 数据库检查
-        failed_count = self.oper_login_log.get_failed_login_attempts(user_id, self.lockout_duration)
+        # 检查最近的失败登录尝试
+        failed_count = self.oper_login_attempt.get_recent_failed_attempts(
+            user.email, 'email', self.lockout_duration
+        )
         return failed_count >= self.max_login_attempts
     
-    def _record_failed_attempt(self, user_id):
+    def _record_failed_attempt(self, user, credential, reason):
         """记录失败尝试"""
-        cache_key = f"failed_attempts:{user_id}"
+        cache_key = f"failed_attempts:{user.id if user else 'unknown'}"
         current_attempts = redis_client.get(cache_key) or 0
         redis_client.setex(cache_key, self.lockout_duration * 3600, int(current_attempts) + 1)
+        
+        # 记录到数据库
+        client_info = self._get_client_info()
+        attempt_data = LoginAttemptModel(
+            email=credential if '@' in credential else None,
+            username=credential if '@' not in credential else None,
+            ip_address=client_info['ip_address'],
+            user_agent=client_info['user_agent'],
+            success=False,
+            failure_reason=reason
+        )
+        self.oper_login_attempt.create_attempt(attempt_data)
+        
+        # 如果用户存在且失败次数过多，锁定账户
+        if user and int(current_attempts) + 1 >= self.max_login_attempts:
+            self.oper_user.lock_user(user, self.lockout_duration * 60)
     
-    def _clear_failed_attempts(self, user_id):
+    def _clear_failed_attempts(self, user):
         """清除失败尝试记录"""
-        cache_key = f"failed_attempts:{user_id}"
+        cache_key = f"failed_attempts:{user.id}"
         redis_client.delete(cache_key)
+        
+        # 重置数据库中的失败次数
+        self.oper_user.update_user(user, {'failed_login_attempts': 0, 'locked_until': None})
     
-    def _create_refresh_token_record(self, user_id, refresh_token):
-        """创建刷新令牌记录"""
+    def _create_user_session(self, user_id, session_token, refresh_token):
+        """创建用户会话"""
         client_info = self._get_client_info()
-        token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+        refresh_token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+        
         # 计算过期时间
-        expires_at = CommonTools.get_now(days=Config.REFRESH_TOKEN_EXPIRE_DAYS)
+        expires_at = datetime.now() + timedelta(days=Config.REFRESH_TOKEN_EXPIRE_DAYS)
         
-        token_data = {
-            'user_id': user_id,
-            'token_hash': token_hash,
-            'expires_at': expires_at,
-            'device_info': client_info['device_info'],
-            'ip_address': client_info['ip_address']
-        }
+        session_data = UserSessionModel(
+            user_id=user_id,
+            session_token=session_token,
+            refresh_token_hash=refresh_token_hash,
+            device_info={
+                'type': client_info['device_info'],
+                'user_agent': client_info['user_agent']
+            },
+            ip_address=client_info['ip_address'],
+            expires_at=expires_at
+        )
         
-        # 直接创建模型实例
-        from dbs.mysql_db.model_tables import RefreshTokenModel
-        token_obj = RefreshTokenModel(**token_data)
-        print(f"Debug: Token object created: user_id={token_obj.user_id}, token_hash={token_obj.token_hash}")
-        
-        result = self.oper_refresh_token.create_refresh_token(token_obj)
-        print(f"Debug: Token creation result = {result}")
-        return result
+        return self.oper_session.create_session(session_data)
     
-    def _create_login_log(self, user_id, login_type="password", result="success", fail_reason=None):
-        """创建登录日志"""
+    def _record_successful_login(self, user, credential):
+        """记录成功登录"""
         client_info = self._get_client_info()
-        
-        log_data = {
-            'user_id': user_id,
-            'login_type': login_type,
-            'ip_address': client_info['ip_address'],
-            'user_agent': client_info['user_agent'],
-            'device_info': client_info['device_info'],
-            'login_result': result,
-            'fail_reason': fail_reason
-        }
-        
-        # 直接创建模型实例
-        from dbs.mysql_db.model_tables import LoginLogModel
-        log_obj = LoginLogModel(**log_data)
-        
-        return self.oper_login_log.create_login_log(log_obj)
+        attempt_data = LoginAttemptModel(
+            email=credential if '@' in credential else user.email,
+            username=credential if '@' not in credential else user.username,
+            ip_address=client_info['ip_address'],
+            user_agent=client_info['user_agent'],
+            success=True
+        )
+        return self.oper_login_attempt.create_attempt(attempt_data)
 
     # ==================== 事务处理装饰器 ====================
     
@@ -191,19 +218,27 @@ class AuthController:
             if email_error:
                 raise ValueError(email_error)
             
-            # 创建用户对象
-            user_data = {
-                'username': data['username'].strip(),
-                'email': data['email'].strip().lower(),
-                'password_hash': OperUserModel.hash_password(data['password']),
-                'full_name': data.get('full_name', '').strip(),
-                'phone': data.get('phone', '').strip(),
-                'role': 'user'  # 默认用户角色
-            }
+            # 创建密码哈希和盐值
+            password_hash, salt = OperUserModel.create_password_hash(data['password'])
             
-            # 直接创建模型实例
-            from dbs.mysql_db.model_tables import UserModel
-            user_obj = UserModel(**user_data)
+            # 生成邮箱验证令牌
+            verification_token = secrets.token_urlsafe(32)
+            verification_expires = datetime.now() + timedelta(hours=24)
+            
+            # 创建用户对象
+            user_obj = UserModel(
+                username=data['username'].strip(),
+                email=data['email'].strip().lower(),
+                password_hash=password_hash,
+                salt=salt,
+                display_name=data.get('display_name', data['username'].strip()),
+                phone=data.get('phone', '').strip(),
+                timezone=data.get('timezone', 'UTC'),
+                language=data.get('language', 'en'),
+                email_verification_token=verification_token,
+                email_verification_expires=verification_expires,
+                status='pending_verification'
+            )
             
             # 创建用户
             result, flag = self.oper_user.create_user(user_obj)
@@ -219,7 +254,9 @@ class AuthController:
                 'user_id': created_user.id,
                 'username': created_user.username,
                 'email': created_user.email,
-                'full_name': created_user.full_name,
+                'display_name': created_user.display_name,
+                'status': created_user.status,
+                'email_verification_token': verification_token,
                 'created_at': created_user.created_at
             }
         
@@ -237,41 +274,47 @@ class AuthController:
                 return "用戶名或密碼錯誤", False
             
             # 检查账户是否被锁定
-            if self._is_account_locked(user.id):
-                self._create_login_log(user.id, "password", "failed", "賬戶被鎖定")
+            if self._is_account_locked(user):
+                self._record_failed_attempt(user, credential, "賬戶被鎖定")
                 return f"賬戶被鎖定，請在{self.lockout_duration}小時後重試", False
+            
+            # 检查账户状态
+            if user.status not in ['active', 'pending_verification']:
+                self._record_failed_attempt(user, credential, f"賬戶狀態：{user.status}")
+                return f"賬戶狀態異常：{user.status}", False
             
             # 验证密码
             if not self.oper_user.verify_password(user, password):
-                self._record_failed_attempt(user.id)
-                self._create_login_log(user.id, "password", "failed", "密碼錯誤")
+                self._record_failed_attempt(user, credential, "密碼錯誤")
                 return "用戶名或密碼錯誤", False
             
             # 清除失败尝试记录
-            self._clear_failed_attempts(user.id)
+            self._clear_failed_attempts(user)
             
             # 创建JWT令牌
-            import uuid
+            session_id = str(uuid.uuid4())
             access_token = create_access_token(
                 identity=str(user.id),
                 additional_claims={
                     'username': user.username,
-                    'jti': str(uuid.uuid4())  # 添加唯一标识符用于撤销
+                    'session_id': session_id,
+                    'jti': str(uuid.uuid4())
                 }
             )
             refresh_token = create_refresh_token(
                 identity=str(user.id),
                 additional_claims={
                     'username': user.username,
-                    'jti': str(uuid.uuid4())  # 添加唯一标识符用于撤销
+                    'session_id': session_id,
+                    'jti': str(uuid.uuid4())
                 }
             )
             
             def _login_transaction():
-                # 创建刷新令牌记录
-                token_result, token_flag = self._create_refresh_token_record(user.id, refresh_token)
-                if not token_flag:
-                    raise Exception(f"創建刷新令牌失敗: {token_result}")
+                # 创建用户会话
+                session_result, session_flag = self._create_user_session(user.id, session_id, refresh_token)
+                if not session_flag:
+                    raise Exception(f"創建用戶會話失敗: {session_result}")
                 
                 # 更新最后登录时间
                 login_result, login_flag = self.oper_user.update_last_login(
@@ -280,21 +323,24 @@ class AuthController:
                 if not login_flag:
                     logger.warning(f"更新最後登錄時間失敗: {login_result}")
                 
-                # 创建登录日志
-                log_result, log_flag = self._create_login_log(user.id, "password", "success")
-                if not log_flag:
-                    logger.warning(f"創建登錄日誌失敗: {log_result}")
+                # 记录成功登录
+                attempt_result, attempt_flag = self._record_successful_login(user, credential)
+                if not attempt_flag:
+                    logger.warning(f"記錄成功登錄失敗: {attempt_result}")
                 
                 return {
                     'access_token': access_token,
                     'refresh_token': refresh_token,
                     'token_type': 'Bearer',
+                    'session_id': session_id,
                     'user_info': {
                         'user_id': user.id,
                         'username': user.username,
                         'email': user.email,
-                        'full_name': user.full_name,
-                        'role': user.role,
+                        'display_name': user.display_name,
+                        'status': user.status,
+                        'email_verified': user.email_verified,
+                        'two_factor_enabled': user.two_factor_enabled,
                         'avatar_url': user.avatar_url
                     }
                 }
@@ -380,8 +426,8 @@ class AuthController:
             if not user:
                 return "用戶不存在", False
             
-            # 获取活跃的刷新令牌数量
-            active_tokens = self.oper_refresh_token.get_active_tokens_by_user(user_id)
+            # 获取活跃的用户会话数量
+            active_sessions = self.oper_session.get_active_sessions_by_user(user_id)
             
             profile_data = {
                 'user_info': {
@@ -397,8 +443,8 @@ class AuthController:
                     'created_at': user.created_at
                 },
                 'security_info': {
-                    'active_sessions': len(active_tokens),
-                    'last_login_ip': user.login_ip
+                    'active_sessions': len(active_sessions),
+                    'last_login_ip': user.last_login_ip
                 }
             }
             
@@ -470,8 +516,8 @@ class AuthController:
     def get_user_sessions(self, user_id: int, current_token_hash: str = None) -> Tuple[Any, bool]:
         """获取用户会话列表 (MVC架构优化版本)"""
         try:
-            # 获取活跃的刷新令牌
-            active_tokens = self.oper_refresh_token.get_active_tokens_by_user(user_id)
+            # 获取活跃的用户会话
+            active_sessions = self.oper_session.get_active_sessions_by_user(user_id)
             
             sessions_data = []
             for token in active_tokens:
@@ -534,3 +580,315 @@ class AuthController:
         except Exception as e:
             logger.error(f"撤銷用戶會話異常: {str(e)}")
             return "撤銷會話失敗", False
+    
+    # ==================== 新增的功能方法 ====================
+    
+    def forgot_password(self, email: str) -> Tuple[Any, bool]:
+        """忘记密码"""
+        try:
+            user = self.oper_user.get_by_email(email)
+            if not user:
+                # 為了安全性，即使用戶不存在也返回成功消息
+                return "如果該郵箱已註冊，您將收到密碼重置郵件", True
+            
+            # 生成密碼重置令牌
+            reset_token = secrets.token_urlsafe(32)
+            reset_expires = datetime.now() + timedelta(hours=1)
+            
+            def _forgot_password_transaction():
+                result, flag = self.oper_user.set_password_reset_token(user, reset_token, reset_expires)
+                if not flag:
+                    raise Exception(f"設置密碼重置令牌失敗: {result}")
+                
+                return {
+                    'reset_token': reset_token,
+                    'expires_at': reset_expires.isoformat(),
+                    'message': '密碼重置郵件已發送'
+                }
+            
+            return self._execute_with_transaction(_forgot_password_transaction, "忘記密碼")
+            
+        except Exception as e:
+            logger.error(f"忘記密碼異常: {str(e)}")
+            return "處理忘記密碼請求失敗", False
+    
+    def reset_password(self, token: str, new_password: str) -> Tuple[Any, bool]:
+        """重置密码"""
+        try:
+            # 验证密码强度
+            password_error = self._validate_password_strength(new_password)
+            if password_error:
+                return password_error, False
+            
+            # 查找具有有效重置令牌的用戶
+            user = self.oper_user.model.query.filter(
+                and_(
+                    self.oper_user.model.password_reset_token == token,
+                    self.oper_user.model.password_reset_expires > datetime.now()
+                )
+            ).first()
+            
+            if not user:
+                return "密碼重置令牌無效或已過期", False
+            
+            def _reset_password_transaction():
+                result, flag = self.oper_user.update_password(user, new_password)
+                if not flag:
+                    raise Exception(f"更新密碼失敗: {result}")
+                
+                return "密碼重置成功"
+            
+            return self._execute_with_transaction(_reset_password_transaction, "重置密碼")
+            
+        except Exception as e:
+            logger.error(f"重置密碼異常: {str(e)}")
+            return "重置密碼失敗", False
+    
+    def change_password(self, user_id: str, old_password: str, new_password: str) -> Tuple[Any, bool]:
+        """修改密码"""
+        try:
+            # 验证新密码强度
+            password_error = self._validate_password_strength(new_password)
+            if password_error:
+                return password_error, False
+            
+            user = self.oper_user.get_by_id(user_id)
+            if not user:
+                return "用戶不存在", False
+            
+            # 验证旧密码
+            if not self.oper_user.verify_password(user, old_password):
+                return "原密碼錯誤", False
+            
+            def _change_password_transaction():
+                result, flag = self.oper_user.update_password(user, new_password)
+                if not flag:
+                    raise Exception(f"更新密碼失敗: {result}")
+                
+                return "密碼修改成功"
+            
+            return self._execute_with_transaction(_change_password_transaction, "修改密碼")
+            
+        except Exception as e:
+            logger.error(f"修改密碼異常: {str(e)}")
+            return "修改密碼失敗", False
+    
+    def send_verification_email(self, user_id: str) -> Tuple[Any, bool]:
+        """发送验证邮件"""
+        try:
+            user = self.oper_user.get_by_id(user_id)
+            if not user:
+                return "用戶不存在", False
+            
+            if user.email_verified:
+                return "郵箱已經驗證過了", False
+            
+            # 生成新的驗證令牌
+            verification_token = secrets.token_urlsafe(32)
+            verification_expires = datetime.now() + timedelta(hours=24)
+            
+            def _send_verification_transaction():
+                result, flag = self.oper_user.set_email_verification_token(
+                    user, verification_token, verification_expires
+                )
+                if not flag:
+                    raise Exception(f"設置郵箱驗證令牌失敗: {result}")
+                
+                return {
+                    'verification_token': verification_token,
+                    'expires_at': verification_expires.isoformat(),
+                    'message': '驗證郵件已發送'
+                }
+            
+            return self._execute_with_transaction(_send_verification_transaction, "發送驗證郵件")
+            
+        except Exception as e:
+            logger.error(f"發送驗證郵件異常: {str(e)}")
+            return "發送驗證郵件失敗", False
+    
+    def verify_email(self, token: str) -> Tuple[Any, bool]:
+        """验证邮箱"""
+        try:
+            # 查找具有有效驗證令牌的用戶
+            user = self.oper_user.model.query.filter(
+                and_(
+                    self.oper_user.model.email_verification_token == token,
+                    self.oper_user.model.email_verification_expires > datetime.now()
+                )
+            ).first()
+            
+            if not user:
+                return "郵箱驗證令牌無效或已過期", False
+            
+            if user.email_verified:
+                return "郵箱已經驗證過了", False
+            
+            def _verify_email_transaction():
+                result, flag = self.oper_user.verify_email(user)
+                if not flag:
+                    raise Exception(f"驗證郵箱失敗: {result}")
+                
+                return "郵箱驗證成功"
+            
+            return self._execute_with_transaction(_verify_email_transaction, "驗證郵箱")
+            
+        except Exception as e:
+            logger.error(f"驗證郵箱異常: {str(e)}")
+            return "驗證郵箱失敗", False
+    
+    def setup_two_factor(self, user_id: str) -> Tuple[Any, bool]:
+        """设置双重认证"""
+        try:
+            user = self.oper_user.get_by_id(user_id)
+            if not user:
+                return "用戶不存在", False
+            
+            if user.two_factor_enabled:
+                return "雙重認證已經啟用", False
+            
+            # 生成2FA密鑰和備用碼
+            import pyotp
+            secret = pyotp.random_base32()
+            backup_codes = [secrets.token_hex(4).upper() for _ in range(10)]
+            
+            def _setup_2fa_transaction():
+                result, flag = self.oper_user.setup_two_factor(user, secret, backup_codes)
+                if not flag:
+                    raise Exception(f"設置雙重認證失敗: {result}")
+                
+                return {
+                    'secret': secret,
+                    'backup_codes': backup_codes,
+                    'qr_code_url': pyotp.totp.TOTP(secret).provisioning_uri(
+                        user.email,
+                        issuer_name="DevOps Central"
+                    )
+                }
+            
+            return self._execute_with_transaction(_setup_2fa_transaction, "設置雙重認證")
+            
+        except Exception as e:
+            logger.error(f"設置雙重認證異常: {str(e)}")
+            return "設置雙重認證失敗", False
+    
+    def verify_two_factor(self, user_id: str, token: str) -> Tuple[Any, bool]:
+        """验证双重认证"""
+        try:
+            user = self.oper_user.get_by_id(user_id)
+            if not user or not user.two_factor_enabled:
+                return "雙重認證未啟用", False
+            
+            import pyotp
+            totp = pyotp.TOTP(user.two_factor_secret)
+            
+            # 驗證TOTP令牌或備用碼
+            is_valid = totp.verify(token, valid_window=1)
+            if not is_valid and user.backup_codes:
+                is_valid = token.upper() in user.backup_codes
+                if is_valid:
+                    # 使用備用碼後移除它
+                    user.backup_codes.remove(token.upper())
+                    db.session.commit()
+            
+            if not is_valid:
+                return "驗證碼錯誤", False
+            
+            return "雙重認證驗證成功", True
+            
+        except Exception as e:
+            logger.error(f"驗證雙重認證異常: {str(e)}")
+            return "驗證雙重認證失敗", False
+    
+    def disable_two_factor(self, user_id: str, password: str) -> Tuple[Any, bool]:
+        """禁用双重认证"""
+        try:
+            user = self.oper_user.get_by_id(user_id)
+            if not user:
+                return "用戶不存在", False
+            
+            if not user.two_factor_enabled:
+                return "雙重認證未啟用", False
+            
+            # 验证密码
+            if not self.oper_user.verify_password(user, password):
+                return "密碼錯誤", False
+            
+            def _disable_2fa_transaction():
+                result, flag = self.oper_user.disable_two_factor(user)
+                if not flag:
+                    raise Exception(f"禁用雙重認證失敗: {result}")
+                
+                return "雙重認證已禁用"
+            
+            return self._execute_with_transaction(_disable_2fa_transaction, "禁用雙重認證")
+            
+        except Exception as e:
+            logger.error(f"禁用雙重認證異常: {str(e)}")
+            return "禁用雙重認證失敗", False
+    
+    def validate_token_internal(self, token: str) -> Tuple[Any, bool]:
+        """内部服务验证令牌"""
+        try:
+            # 解析JWT令牌
+            try:
+                token_data = decode_token(token)
+                user_id = token_data['sub']
+                session_id = token_data.get('session_id')
+            except Exception:
+                return "令牌無效", False
+            
+            # 检查用户是否存在
+            user = self.oper_user.get_by_id(user_id)
+            if not user:
+                return "用戶不存在", False
+            
+            # 检查会话是否有效
+            if session_id:
+                session = self.oper_session.get_by_session_token(session_id)
+                if not session or not self.oper_session.is_session_valid(session):
+                    return "會話無效", False
+            
+            # 检查令牌是否在黑名单中
+            jti = token_data.get('jti')
+            if jti:
+                blacklist_key = f"blacklisted_token:{jti}"
+                if redis_client.get(blacklist_key):
+                    return "令牌已被撤銷", False
+            
+            return {
+                'valid': True,
+                'user_id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'status': user.status
+            }, True
+            
+        except Exception as e:
+            logger.error(f"驗證令牌異常: {str(e)}")
+            return "驗證令牌失敗", False
+    
+    def get_user_batch(self, user_ids: List[str]) -> Tuple[Any, bool]:
+        """批量获取用户信息"""
+        try:
+            users = self.oper_user.get_users_by_ids(user_ids)
+            
+            users_data = []
+            for user in users:
+                users_data.append({
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'display_name': user.display_name,
+                    'avatar_url': user.avatar_url,
+                    'status': user.status,
+                    'created_at': user.created_at
+                })
+            
+            return {
+                'users': users_data,
+                'total': len(users_data)
+            }, True
+            
+        except Exception as e:
+            logger.error(f"批量獲取用戶信息異常: {str(e)}")
+            return "獲取用戶信息失敗", False

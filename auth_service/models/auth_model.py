@@ -1,23 +1,29 @@
 # -*- coding: utf-8 -*-
 """
 @文件: auth_model.py
-@說明: 認證模型操作類 (优化版本)
+@說明: 認證模型操作類 (新架構版本)
 @時間: 2025-01-09
 @作者: LiDong
 """
 
 import hashlib
+import secrets
+import uuid
 from datetime import datetime, timedelta
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, func
 from sqlalchemy.orm import load_only
+from typing import List, Dict, Any, Optional, Tuple
 
 from common.common_tools import CommonTools, TryExcept
 from dbs.mysql_db import db
-from dbs.mysql_db.model_tables import UserModel, RefreshTokenModel, LoginLogModel, UserSessionModel
+from dbs.mysql_db.model_tables import (
+    UserModel, UserSessionModel, UserRoleModel, UserRoleAssignmentModel,
+    LoginAttemptModel, OAuthProviderModel, UserOAuthAccountModel
+)
 
 
 class OperUserModel:
-    """用户模型操作类 (优化版本)"""
+    """用户模型操作类 (新架構版本)"""
     
     def __init__(self):
         self.model = UserModel
@@ -35,13 +41,13 @@ class OperUserModel:
         if not user_data.password_hash:
             raise ValueError("密碼不能為空")
         
-        # 检查用户名是否已存在
+        # 检查用户名和邮箱是否已存在
         existing_user = self.model.query.filter(
             or_(
                 self.model.username == user_data.username.strip(),
                 self.model.email == user_data.email.strip()
             )
-        ).filter(self.model.status == 1).first()
+        ).first()
         
         if existing_user:
             if existing_user.username == user_data.username.strip():
@@ -54,191 +60,144 @@ class OperUserModel:
     
     def get_by_username(self, username):
         """根据用户名获取用户"""
-        return self.model.query.filter(
-            and_(
-                self.model.username == username,
-                self.model.status == 1
-            )
-        ).first()
+        return self.model.query.filter(self.model.username == username).first()
     
     def get_by_email(self, email):
         """根据邮箱获取用户"""
-        return self.model.query.filter(
-            and_(
-                self.model.email == email,
-                self.model.status == 1
-            )
-        ).first()
+        return self.model.query.filter(self.model.email == email).first()
     
     def get_by_id(self, user_id):
         """根据ID获取用户"""
-        return self.model.query.filter(
-            and_(
-                self.model.id == user_id,
-                self.model.status == 1
-            )
-        ).options(
-            # 只加载必要字段，排除密码
-            load_only(
-                self.model.id, self.model.username, self.model.email,
-                self.model.full_name, self.model.phone, self.model.avatar_url,
-                self.model.role, self.model.is_email_verified, 
-                self.model.last_login_at, self.model.created_at
-            )
-        ).first()
+        return self.model.query.filter(self.model.id == user_id).first()
     
     def get_by_login_credential(self, credential):
         """根据登录凭证获取用户(支持用户名或邮箱)"""
         return self.model.query.filter(
-            and_(
-                or_(
-                    self.model.username == credential,
-                    self.model.email == credential
-                ),
-                self.model.status == 1
+            or_(
+                self.model.username == credential,
+                self.model.email == credential
             )
         ).first()
+    
+    def get_users_by_ids(self, user_ids: List[str]) -> List[UserModel]:
+        """批量获取用户信息"""
+        return self.model.query.filter(self.model.id.in_(user_ids)).all()
     
     @TryExcept("更新用戶失敗")
     def update_user(self, user, update_data):
         """更新用户信息"""
-        allowed_fields = ['full_name', 'phone', 'avatar_url', 'is_email_verified']
+        allowed_fields = [
+            'display_name', 'phone', 'avatar_url', 'email_verified',
+            'phone_verified', 'timezone', 'language', 'preferences',
+            'status', 'failed_login_attempts', 'locked_until'
+        ]
         
         for field, value in update_data.items():
             if field in allowed_fields and hasattr(user, field):
                 setattr(user, field, value)
         
-        user.updated_at = CommonTools.get_now()
         return True
     
     @TryExcept("更新最後登錄時間失敗")
     def update_last_login(self, user, ip_address=None):
         """更新最后登录时间和IP"""
-        user.last_login_at = CommonTools.get_now()
+        user.last_login_at = datetime.now()
         if ip_address:
-            user.login_ip = ip_address
-        user.updated_at = CommonTools.get_now()
+            user.last_login_ip = ip_address
+        user.failed_login_attempts = 0  # 成功登录后重置失败次数
         return True
     
     def verify_password(self, user, password):
         """验证密码"""
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        # 使用盐值进行密码验证
+        password_hash = self._hash_password_with_salt(password, user.salt)
         return user.password_hash == password_hash
     
-    @staticmethod
-    def hash_password(password):
-        """密码哈希"""
-        return hashlib.sha256(password.encode()).hexdigest()
-
-
-class OperRefreshTokenModel:
-    """刷新令牌模型操作类"""
-    
-    def __init__(self):
-        self.model = RefreshTokenModel
-    
-    @TryExcept("創建刷新令牌失敗")
-    def create_refresh_token(self, token_data):
-        """创建刷新令牌"""
-        db.session.add(token_data)
+    @TryExcept("更新密碼失敗")
+    def update_password(self, user, new_password):
+        """更新密码"""
+        salt = self._generate_salt()
+        password_hash = self._hash_password_with_salt(new_password, salt)
+        
+        user.password_hash = password_hash
+        user.salt = salt
+        user.password_reset_token = None
+        user.password_reset_expires = None
         return True
     
-    def get_by_token_hash(self, token_hash):
-        """根据令牌哈希获取令牌记录"""
-        return self.model.query.filter(
-            and_(
-                self.model.token_hash == token_hash,
-                self.model.status == 1,
-                self.model.is_revoked == False
-            )
-        ).first()
-    
-    def get_active_tokens_by_user(self, user_id, limit=10):
-        """获取用户的活跃令牌"""
-        current_time = CommonTools.get_now()
-        return self.model.query.filter(
-            and_(
-                self.model.user_id == user_id,
-                self.model.status == 1,
-                self.model.is_revoked == False,
-                self.model.expires_at > current_time
-            )
-        ).order_by(self.model.created_at.desc()).limit(limit).all()
-    
-    @TryExcept("撤銷令牌失敗")
-    def revoke_token(self, token):
-        """撤销令牌"""
-        token.is_revoked = True
-        token.status_update_at = CommonTools.get_now()
+    @TryExcept("設置密碼重置令牌失敗")
+    def set_password_reset_token(self, user, token, expires_at):
+        """设置密码重置令牌"""
+        user.password_reset_token = token
+        user.password_reset_expires = expires_at
         return True
     
-    @TryExcept("清理過期令牌失敗")
-    def cleanup_expired_tokens(self):
-        """清理过期令牌"""
-        current_time = CommonTools.get_now()
-        expired_tokens = self.model.query.filter(
-            and_(
-                self.model.expires_at <= current_time,
-                self.model.status == 1
-            )
-        ).all()
-        
-        for token in expired_tokens:
-            token.status = 0
-            token.status_update_at = current_time
-        
-        return len(expired_tokens)
+    @TryExcept("設置郵箱驗證令牌失敗")
+    def set_email_verification_token(self, user, token, expires_at):
+        """设置邮箱验证令牌"""
+        user.email_verification_token = token
+        user.email_verification_expires = expires_at
+        return True
     
-    def is_token_valid(self, token):
-        """检查令牌是否有效"""
-        if not token or token.is_revoked or token.status != 1:
+    @TryExcept("驗證郵箱失敗")
+    def verify_email(self, user):
+        """验证邮箱"""
+        user.email_verified = True
+        user.email_verification_token = None
+        user.email_verification_expires = None
+        if user.status == 'pending_verification':
+            user.status = 'active'
+        return True
+    
+    @TryExcept("鎖定用戶失敗")
+    def lock_user(self, user, lock_duration_minutes=30):
+        """锁定用户账户"""
+        user.failed_login_attempts += 1
+        user.locked_until = datetime.now() + timedelta(minutes=lock_duration_minutes)
+        return True
+    
+    def is_account_locked(self, user):
+        """检查账户是否被锁定"""
+        if not user.locked_until:
             return False
-        
-        current_time = CommonTools.get_now()
-        return token.expires_at > current_time
-
-
-class OperLoginLogModel:
-    """登录日志模型操作类"""
+        return datetime.now() < user.locked_until
     
-    def __init__(self):
-        self.model = LoginLogModel
-    
-    @TryExcept("記錄登錄日誌失敗")
-    def create_login_log(self, log_data):
-        """创建登录日志"""
-        db.session.add(log_data)
+    @TryExcept("設置雙重認證失敗")
+    def setup_two_factor(self, user, secret, backup_codes):
+        """设置双重认证"""
+        user.two_factor_enabled = True
+        user.two_factor_secret = secret
+        user.backup_codes = backup_codes
         return True
     
-    def get_user_login_history(self, user_id, page=1, size=10):
-        """获取用户登录历史"""
-        return self.model.query.filter(
-            and_(
-                self.model.user_id == user_id,
-                self.model.status == 1
-            )
-        ).order_by(self.model.created_at.desc()).paginate(
-            page=page, per_page=size, error_out=False
-        )
+    @TryExcept("禁用雙重認證失敗")
+    def disable_two_factor(self, user):
+        """禁用双重认证"""
+        user.two_factor_enabled = False
+        user.two_factor_secret = None
+        user.backup_codes = None
+        return True
     
-    def get_failed_login_attempts(self, user_id, hours=24):
-        """获取指定时间内的失败登录次数"""
-        since_time = CommonTools.get_now(
-            datetime.now() - timedelta(hours=hours)
-        )
-        
-        return self.model.query.filter(
-            and_(
-                self.model.user_id == user_id,
-                self.model.login_result == "failed",
-                self.model.created_at >= since_time,
-                self.model.status == 1
-            )
-        ).count()
+    @staticmethod
+    def _generate_salt():
+        """生成随机盐值"""
+        return secrets.token_hex(32)
+    
+    @staticmethod
+    def _hash_password_with_salt(password, salt):
+        """使用盐值哈希密码"""
+        return hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000).hex()
+    
+    @staticmethod
+    def create_password_hash(password):
+        """创建密码哈希（含盐值）"""
+        salt = OperUserModel._generate_salt()
+        password_hash = OperUserModel._hash_password_with_salt(password, salt)
+        return password_hash, salt
 
 
 class OperUserSessionModel:
-    """用户会话模型操作类"""
+    """用户会话模型操作类 (新架構版本)"""
     
     def __init__(self):
         self.model = UserSessionModel
@@ -254,34 +213,240 @@ class OperUserSessionModel:
         return self.model.query.filter(
             and_(
                 self.model.session_token == session_token,
-                self.model.status == 1,
                 self.model.is_active == True
             )
         ).first()
     
-    def get_active_sessions_by_user(self, user_id):
+    def get_by_refresh_token_hash(self, refresh_token_hash):
+        """根据刷新令牌哈希获取会话"""
+        return self.model.query.filter(
+            and_(
+                self.model.refresh_token_hash == refresh_token_hash,
+                self.model.is_active == True
+            )
+        ).first()
+    
+    def get_active_sessions_by_user(self, user_id, limit=10):
         """获取用户的活跃会话"""
-        current_time = CommonTools.get_now()
+        current_time = datetime.now()
         return self.model.query.filter(
             and_(
                 self.model.user_id == user_id,
-                self.model.status == 1,
                 self.model.is_active == True,
                 self.model.expires_at > current_time
             )
-        ).order_by(self.model.created_at.desc()).all()
+        ).order_by(self.model.created_at.desc()).limit(limit).all()
     
     @TryExcept("終止會話失敗")
     def terminate_session(self, session):
         """终止会话"""
         session.is_active = False
-        session.status_update_at = CommonTools.get_now()
+        return True
+    
+    @TryExcept("更新會話活動時間失敗")
+    def update_last_activity(self, session):
+        """更新会话最后活动时间"""
+        session.last_activity = datetime.now()
         return True
     
     def is_session_valid(self, session):
         """检查会话是否有效"""
-        if not session or not session.is_active or session.status != 1:
+        if not session or not session.is_active:
             return False
         
-        current_time = CommonTools.get_now()
+        current_time = datetime.now()
         return session.expires_at > current_time
+    
+    @TryExcept("清理過期會話失敗")
+    def cleanup_expired_sessions(self):
+        """清理过期会话"""
+        current_time = datetime.now()
+        expired_sessions = self.model.query.filter(
+            and_(
+                self.model.expires_at <= current_time,
+                self.model.is_active == True
+            )
+        ).all()
+        
+        for session in expired_sessions:
+            session.is_active = False
+        
+        return len(expired_sessions)
+
+
+class OperUserRoleModel:
+    """用户角色模型操作类"""
+    
+    def __init__(self):
+        self.model = UserRoleModel
+        self.assignment_model = UserRoleAssignmentModel
+    
+    @TryExcept("創建角色失敗")
+    def create_role(self, role_data):
+        """创建角色"""
+        db.session.add(role_data)
+        return True
+    
+    def get_by_id(self, role_id):
+        """根据ID获取角色"""
+        return self.model.query.filter(self.model.id == role_id).first()
+    
+    def get_by_name(self, name):
+        """根据名称获取角色"""
+        return self.model.query.filter(self.model.name == name).first()
+    
+    def get_all_roles(self):
+        """获取所有角色"""
+        return self.model.query.all()
+    
+    def get_user_roles(self, user_id):
+        """获取用户的角色"""
+        current_time = datetime.now()
+        return db.session.query(self.model).join(
+            self.assignment_model,
+            self.model.id == self.assignment_model.role_id
+        ).filter(
+            and_(
+                self.assignment_model.user_id == user_id,
+                or_(
+                    self.assignment_model.expires_at.is_(None),
+                    self.assignment_model.expires_at > current_time
+                )
+            )
+        ).all()
+    
+    @TryExcept("分配角色失敗")
+    def assign_role_to_user(self, user_id, role_id, assigned_by, expires_at=None):
+        """分配角色给用户"""
+        # 检查是否已存在
+        existing = self.assignment_model.query.filter(
+            and_(
+                self.assignment_model.user_id == user_id,
+                self.assignment_model.role_id == role_id
+            )
+        ).first()
+        
+        if existing:
+            # 更新过期时间
+            existing.expires_at = expires_at
+            existing.assigned_by = assigned_by
+            existing.assigned_at = datetime.now()
+        else:
+            # 创建新分配
+            assignment = self.assignment_model(
+                user_id=user_id,
+                role_id=role_id,
+                assigned_by=assigned_by,
+                expires_at=expires_at
+            )
+            db.session.add(assignment)
+        
+        return True
+    
+    @TryExcept("撤銷角色失敗")
+    def revoke_role_from_user(self, user_id, role_id):
+        """撤销用户角色"""
+        assignment = self.assignment_model.query.filter(
+            and_(
+                self.assignment_model.user_id == user_id,
+                self.assignment_model.role_id == role_id
+            )
+        ).first()
+        
+        if assignment:
+            db.session.delete(assignment)
+        
+        return True
+
+
+class OperLoginAttemptModel:
+    """登录尝试记录模型操作类"""
+    
+    def __init__(self):
+        self.model = LoginAttemptModel
+    
+    @TryExcept("記錄登錄嘗試失敗")
+    def create_attempt(self, attempt_data):
+        """创建登录尝试记录"""
+        db.session.add(attempt_data)
+        return True
+    
+    def get_recent_failed_attempts(self, identifier, identifier_type='email', hours=1):
+        """获取最近的失败登录尝试"""
+        since_time = datetime.now() - timedelta(hours=hours)
+        
+        filter_condition = self.model.ip_address == identifier
+        if identifier_type == 'email':
+            filter_condition = self.model.email == identifier
+        elif identifier_type == 'username':
+            filter_condition = self.model.username == identifier
+        
+        return self.model.query.filter(
+            and_(
+                filter_condition,
+                self.model.success == False,
+                self.model.attempted_at >= since_time
+            )
+        ).count()
+    
+    def get_login_history(self, user_identifier, page=1, size=20):
+        """获取登录历史"""
+        return self.model.query.filter(
+            or_(
+                self.model.email == user_identifier,
+                self.model.username == user_identifier
+            )
+        ).order_by(self.model.attempted_at.desc()).paginate(
+            page=page, per_page=size, error_out=False
+        )
+
+
+class OperOAuthProviderModel:
+    """OAuth提供商模型操作类"""
+    
+    def __init__(self):
+        self.model = OAuthProviderModel
+        self.user_account_model = UserOAuthAccountModel
+    
+    def get_by_name(self, name):
+        """根据名称获取OAuth提供商"""
+        return self.model.query.filter(
+            and_(
+                self.model.name == name,
+                self.model.is_enabled == True
+            )
+        ).first()
+    
+    def get_all_enabled_providers(self):
+        """获取所有启用的OAuth提供商"""
+        return self.model.query.filter(self.model.is_enabled == True).all()
+    
+    @TryExcept("創建OAuth帳戶關聯失敗")
+    def create_user_oauth_account(self, account_data):
+        """创建用户OAuth账户关联"""
+        db.session.add(account_data)
+        return True
+    
+    def get_user_oauth_account(self, provider_id, provider_user_id):
+        """获取用户OAuth账户"""
+        return self.user_account_model.query.filter(
+            and_(
+                self.user_account_model.provider_id == provider_id,
+                self.user_account_model.provider_user_id == provider_user_id
+            )
+        ).first()
+    
+    def get_user_oauth_accounts(self, user_id):
+        """获取用户的所有OAuth账户"""
+        return self.user_account_model.query.filter(
+            self.user_account_model.user_id == user_id
+        ).all()
+    
+    @TryExcept("更新OAuth令牌失敗")
+    def update_oauth_tokens(self, account, access_token_encrypted, refresh_token_encrypted, expires_at):
+        """更新OAuth令牌"""
+        account.access_token_encrypted = access_token_encrypted
+        account.refresh_token_encrypted = refresh_token_encrypted
+        account.token_expires_at = expires_at
+        account.last_used_at = datetime.now()
+        return True
