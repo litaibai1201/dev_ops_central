@@ -57,12 +57,19 @@ class UserModel(BaseModel):
     two_factor_secret = db.Column(db.String(255), comment="雙重認證密鑰")
     backup_codes = db.Column(db.JSON, comment="備用驗證碼")
     preferences = db.Column(db.JSON, comment="用戶偏好設置")
+    # 新增平台級權限字段
+    platform_role = db.Column(
+        db.Enum('platform_admin', 'platform_user', name='platform_role'),
+        default='platform_user',
+        comment="平台級角色"
+    )
 
     # 索引
     __table_args__ = (
         db.Index('idx_email', 'email'),
         db.Index('idx_username', 'username'),
         db.Index('idx_status', 'status'),
+        db.Index('idx_platform_role', 'platform_role'),
         db.Index('idx_verification_token', 'email_verification_token'),
         db.Index('idx_reset_token', 'password_reset_token'),
     )
@@ -96,46 +103,6 @@ class UserSessionModel(BaseModel):
     )
 
 
-class UserRoleModel(BaseModel):
-    """用户角色模型 - 平台級角色"""
-    __tablename__ = "user_roles"
-
-    id = db.Column(db.String(36), primary_key=True, default=db.text('(UUID())'), comment="角色ID")
-    name = db.Column(db.String(100), nullable=False, unique=True, comment="角色名稱")
-    description = db.Column(db.Text, comment="角色描述")
-    permissions = db.Column(db.JSON, nullable=False, comment="權限列表")
-    is_system_role = db.Column(db.Boolean, default=False, comment="是否系統角色")
-    created_by = db.Column(db.String(36), comment="創建者ID")
-
-    # 索引
-    __table_args__ = (
-        db.Index('idx_name', 'name'),
-    )
-
-
-class UserRoleAssignmentModel(BaseModel):
-    """用户角色关联模型"""
-    __tablename__ = "user_role_assignments"
-
-    id = db.Column(db.String(36), primary_key=True, default=db.text('(UUID())'), comment="關聯ID")
-    user_id = db.Column(db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, comment="用戶ID")
-    role_id = db.Column(db.String(36), db.ForeignKey('user_roles.id', ondelete='CASCADE'), nullable=False, comment="角色ID")
-    assigned_by = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False, comment="分配者ID")
-    assigned_at = db.Column(db.TIMESTAMP, default=db.func.current_timestamp(), comment="分配時間")
-    expires_at = db.Column(db.TIMESTAMP, comment="過期時間")
-
-    # 關係
-    user = db.relationship('UserModel', foreign_keys=[user_id], backref='role_assignments')
-    role = db.relationship('UserRoleModel', backref='user_assignments')
-    assigned_by_user = db.relationship('UserModel', foreign_keys=[assigned_by])
-
-    # 唯一約束和索引
-    __table_args__ = (
-        db.UniqueConstraint('user_id', 'role_id', name='uk_user_role'),
-        db.Index('idx_user', 'user_id'),
-        db.Index('idx_role', 'role_id'),
-        db.Index('idx_expires', 'expires_at'),
-    )
 
 
 class LoginAttemptModel(BaseModel):

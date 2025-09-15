@@ -19,11 +19,11 @@ from sqlalchemy import and_, or_, func
 from common.common_tools import CommonTools
 from dbs.mysql_db import DBFunction
 from dbs.mysql_db.model_tables import (
-    UserModel, UserSessionModel, UserRoleModel, UserRoleAssignmentModel,
+    UserModel, UserSessionModel,
     LoginAttemptModel, OAuthProviderModel, UserOAuthAccountModel
 )
 from models.auth_model import (
-    OperUserModel, OperUserSessionModel, OperUserRoleModel,
+    OperUserModel, OperUserSessionModel,
     OperLoginAttemptModel, OperOAuthProviderModel
 )
 from configs.constant import Config
@@ -51,7 +51,6 @@ class AuthController:
             
         self.oper_user = OperUserModel()
         self.oper_session = OperUserSessionModel()
-        self.oper_role = OperUserRoleModel()
         self.oper_login_attempt = OperLoginAttemptModel()
         self.oper_oauth = OperOAuthProviderModel()
         
@@ -336,6 +335,7 @@ class AuthController:
                     'email': user.email,
                     'display_name': user.display_name,
                     'status': user.status,
+                    'platform_role': user.platform_role or 'platform_user',
                     'email_verified': user.email_verified,
                     'two_factor_enabled': user.two_factor_enabled,
                     'avatar_url': user.avatar_url
@@ -363,6 +363,7 @@ class AuthController:
                         'email': user.email,
                         'display_name': user.display_name,
                         'status': user.status,
+                        'platform_role': user.platform_role or 'platform_user',
                         'email_verified': user.email_verified,
                         'two_factor_enabled': user.two_factor_enabled,
                         'avatar_url': user.avatar_url
@@ -453,13 +454,15 @@ class AuthController:
                     'user_id': user.id,
                     'username': user.username,
                     'email': user.email,
-                    'full_name': user.full_name,
+                    'display_name': user.display_name,
                     'phone': user.phone,
                     'avatar_url': user.avatar_url,
-                    'role': user.role,
-                    'is_email_verified': user.is_email_verified,
-                    'last_login_at': user.last_login_at,
-                    'created_at': user.created_at
+                    'status': user.status,
+                    'platform_role': user.platform_role or 'platform_user',
+                    'email_verified': user.email_verified,
+                    'two_factor_enabled': user.two_factor_enabled,
+                    'last_login_at': user.last_login_at.isoformat() if user.last_login_at else None,
+                    'created_at': user.created_at.isoformat() if user.created_at else None
                 },
                 'security_info': {
                     'active_sessions': len(active_sessions),
@@ -1110,6 +1113,250 @@ class AuthController:
         except Exception as e:
             logger.error(f"获取缓存统计异常: {str(e)}")
             return "获取缓存统计失败", False
+    
+    # ==================== 平台管理員方法 ====================
+    
+    def get_users_list(self, page: int = 1, size: int = 20, filters: Dict = None) -> Tuple[Any, bool]:
+        """獲取用戶列表（平台管理員）"""
+        try:
+            query = self.oper_user.model.query
+            
+            # 應用過濾條件
+            if filters:
+                if filters.get('status'):
+                    query = query.filter(self.oper_user.model.status == filters['status'])
+                if filters.get('platform_role'):
+                    query = query.filter(self.oper_user.model.platform_role == filters['platform_role'])
+                if filters.get('email_verified') is not None:
+                    query = query.filter(self.oper_user.model.email_verified == filters['email_verified'])
+                if filters.get('search'):
+                    search_term = f"%{filters['search']}%"
+                    query = query.filter(
+                        or_(
+                            self.oper_user.model.username.like(search_term),
+                            self.oper_user.model.email.like(search_term),
+                            self.oper_user.model.display_name.like(search_term)
+                        )
+                    )
+            
+            # 分頁查詢
+            paginated = query.order_by(self.oper_user.model.created_at.desc()).paginate(
+                page=page, per_page=size, error_out=False
+            )
+            
+            users_data = []
+            for user in paginated.items:
+                users_data.append({
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'display_name': user.display_name,
+                    'status': user.status,
+                    'platform_role': user.platform_role,
+                    'email_verified': user.email_verified,
+                    'two_factor_enabled': user.two_factor_enabled,
+                    'last_login_at': user.last_login_at.isoformat() if user.last_login_at else None,
+                    'created_at': user.created_at.isoformat() if user.created_at else None
+                })
+            
+            return {
+                'users': users_data,
+                'total': paginated.total,
+                'page': page,
+                'size': size,
+                'pages': paginated.pages
+            }, True
+            
+        except Exception as e:
+            logger.error(f"獲取用戶列表異常: {str(e)}")
+            return "獲取用戶列表失敗", False
+    
+    def update_user_platform_role(self, admin_user_id: str, target_user_id: str, new_role: str) -> Tuple[Any, bool]:
+        """更新用戶平台角色（平台管理員）"""
+        try:
+            # 驗證新角色值
+            if new_role not in ['platform_admin', 'platform_user']:
+                return "無效的平台角色", False
+            
+            # 獲取目標用戶
+            target_user = self.oper_user.get_by_id(target_user_id)
+            if not target_user:
+                return "用戶不存在", False
+            
+            # 防止管理員降級自己的權限
+            if admin_user_id == target_user_id and new_role != 'platform_admin':
+                return "不能降級自己的平台權限", False
+            
+            def _update_role_transaction():
+                # 更新平台角色
+                update_result, update_flag = self.oper_user.update_user(
+                    target_user, {'platform_role': new_role}
+                )
+                if not update_flag:
+                    raise Exception(f"更新平台角色失敗: {update_result}")
+                
+                # 使用戶緩存失效
+                self.ensure_cache_consistency_on_user_update(target_user_id)
+                
+                return {
+                    'user_id': target_user_id,
+                    'username': target_user.username,
+                    'platform_role': new_role,
+                    'message': f"平台角色已更新為 {new_role}"
+                }
+            
+            return self._execute_with_transaction(_update_role_transaction, "更新平台角色")
+            
+        except Exception as e:
+            logger.error(f"更新用戶平台角色異常: {str(e)}")
+            return "更新平台角色失敗", False
+    
+    def suspend_user(self, admin_user_id: str, target_user_id: str, reason: str = None) -> Tuple[Any, bool]:
+        """暫停用戶（平台管理員）"""
+        try:
+            # 獲取目標用戶
+            target_user = self.oper_user.get_by_id(target_user_id)
+            if not target_user:
+                return "用戶不存在", False
+            
+            # 防止管理員暫停自己
+            if admin_user_id == target_user_id:
+                return "不能暫停自己的賬戶", False
+            
+            if target_user.status == 'suspended':
+                return "用戶已經被暫停", False
+            
+            def _suspend_user_transaction():
+                # 更新用戶狀態
+                update_result, update_flag = self.oper_user.update_user(
+                    target_user, {'status': 'suspended'}
+                )
+                if not update_flag:
+                    raise Exception(f"暫停用戶失敗: {update_result}")
+                
+                # 撤銷該用戶的所有活躍會話
+                active_sessions = self.oper_session.get_active_sessions_by_user(target_user_id)
+                for session in active_sessions:
+                    self.oper_session.terminate_session(session)
+                
+                # 使用戶緩存失效
+                self.ensure_cache_consistency_on_user_update(target_user_id)
+                
+                # 記錄操作日誌
+                logger.info(f"用戶 {target_user.username} 被管理員 {admin_user_id} 暫停. 原因: {reason}")
+                
+                return {
+                    'user_id': target_user_id,
+                    'username': target_user.username,
+                    'status': 'suspended',
+                    'message': '用戶已被暫停'
+                }
+            
+            return self._execute_with_transaction(_suspend_user_transaction, "暫停用戶")
+            
+        except Exception as e:
+            logger.error(f"暫停用戶異常: {str(e)}")
+            return "暫停用戶失敗", False
+    
+    def activate_user(self, admin_user_id: str, target_user_id: str) -> Tuple[Any, bool]:
+        """激活用戶（平台管理員）"""
+        try:
+            # 獲取目標用戶
+            target_user = self.oper_user.get_by_id(target_user_id)
+            if not target_user:
+                return "用戶不存在", False
+            
+            if target_user.status == 'active':
+                return "用戶已經是活躍狀態", False
+            
+            def _activate_user_transaction():
+                # 更新用戶狀態
+                update_data = {
+                    'status': 'active',
+                    'failed_login_attempts': 0,
+                    'locked_until': None
+                }
+                
+                # 如果用戶還未驗證郵箱，同時標記為已驗證
+                if not target_user.email_verified:
+                    update_data['email_verified'] = True
+                
+                update_result, update_flag = self.oper_user.update_user(
+                    target_user, update_data
+                )
+                if not update_flag:
+                    raise Exception(f"激活用戶失敗: {update_result}")
+                
+                # 使用戶緩存失效
+                self.ensure_cache_consistency_on_user_update(target_user_id)
+                
+                # 記錄操作日誌
+                logger.info(f"用戶 {target_user.username} 被管理員 {admin_user_id} 激活")
+                
+                return {
+                    'user_id': target_user_id,
+                    'username': target_user.username,
+                    'status': 'active',
+                    'message': '用戶已激活'
+                }
+            
+            return self._execute_with_transaction(_activate_user_transaction, "激活用戶")
+            
+        except Exception as e:
+            logger.error(f"激活用戶異常: {str(e)}")
+            return "激活用戶失敗", False
+    
+    def check_platform_permission(self, user_id: str, required_role: str = 'platform_admin') -> Tuple[Any, bool]:
+        """檢查平台權限（內部服務）"""
+        try:
+            # 先檢查緩存
+            cached_user = token_cache.get_cached_user_info(user_id)
+            if cached_user:
+                platform_role = cached_user.get('platform_role', 'platform_user')
+                has_permission = (platform_role == required_role) or (platform_role == 'platform_admin')
+                return {
+                    'user_id': user_id,
+                    'platform_role': platform_role,
+                    'has_permission': has_permission,
+                    'required_role': required_role
+                }, True
+            
+            # 從數據庫查詢
+            user = self.oper_user.get_by_id(user_id)
+            if not user:
+                return {
+                    'user_id': user_id,
+                    'platform_role': None,
+                    'has_permission': False,
+                    'required_role': required_role,
+                    'error': '用戶不存在'
+                }, False
+            
+            platform_role = user.platform_role or 'platform_user'
+            has_permission = (platform_role == required_role) or (platform_role == 'platform_admin')
+            
+            # 緩存用戶信息
+            user_info = {
+                'user_id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'display_name': user.display_name,
+                'status': user.status,
+                'platform_role': platform_role,
+                'avatar_url': user.avatar_url
+            }
+            token_cache.cache_user_info(user_id, user_info)
+            
+            return {
+                'user_id': user_id,
+                'platform_role': platform_role,
+                'has_permission': has_permission,
+                'required_role': required_role
+            }, True
+            
+        except Exception as e:
+            logger.error(f"檢查平台權限異常: {str(e)}")
+            return "檢查平台權限失敗", False
     
     def warm_up_cache(self, user_ids: List[str] = None, limit: int = 100) -> Tuple[Any, bool]:
         """缓存预热 - 预先加载热点用户数据"""

@@ -112,11 +112,55 @@ class UserProfileApi(BaseAuthView):
             if not current_user_id:
                 return fail_response_result(msg="無效的用戶身份")
             
-            user_id = int(current_user_id)
+            user_id = int(current_user_id) if current_user_id.isdigit() else current_user_id
             result, flag = self.ac.get_profile(user_id)
             return self._build_response(result, flag, "獲取用戶信息成功")
         except Exception as e:
             logger.error(f"獲取用戶檔案異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+    
+    @jwt_required()
+    @blp.response(200, RspMsgDictSchema)
+    def put(self):
+        """更新用戶信息"""
+        try:
+            current_user_id = get_jwt_identity()
+            if not current_user_id:
+                return fail_response_result(msg="無效的用戶身份")
+            
+            # 獲取更新數據
+            data = request.get_json()
+            allowed_fields = ['display_name', 'phone', 'avatar_url', 'timezone', 'language', 'preferences']
+            update_data = {k: v for k, v in data.items() if k in allowed_fields}
+            
+            if not update_data:
+                return fail_response_result(msg="沒有可更新的字段")
+            
+            # 獲取用戶
+            user = self.ac.oper_user.get_by_id(current_user_id)
+            if not user:
+                return fail_response_result(msg="用戶不存在")
+            
+            # 更新用戶信息
+            result, flag = self.ac.oper_user.update_user(user, update_data)
+            if not flag:
+                return fail_response_result(msg=f"更新失敗: {result}")
+            
+            # 提交事務
+            from dbs.mysql_db import DBFunction
+            commit_result, commit_flag = DBFunction.do_commit("更新用戶信息", True)
+            if not commit_flag:
+                return fail_response_result(msg=f"提交失敗: {commit_result}")
+            
+            # 清除緩存
+            self.ac.ensure_cache_consistency_on_user_update(current_user_id)
+            
+            # 返回更新後的用戶信息
+            result, flag = self.ac.get_profile(current_user_id)
+            return self._build_response(result, flag, "更新用戶信息成功")
+            
+        except Exception as e:
+            logger.error(f"更新用戶檔案異常: {str(e)}")
             return fail_response_result(msg="系統內部錯誤，請稍後重試")
 
 
@@ -419,6 +463,125 @@ class TwoFactorBackupCodesApi(BaseAuthView):
             return fail_response_result(msg="系統內部錯誤，請稍後重試")
 
 
+# ==================== 平台管理員API ====================
+
+@blp.route("/auth/admin/users")
+class AdminUsersListApi(BaseAuthView):
+    """平台管理員獲取用戶列表API"""
+
+    @jwt_required()
+    @blp.response(200, RspMsgDictSchema)
+    def get(self):
+        """獲取用戶列表（平台管理員）"""
+        try:
+            current_user_id = get_jwt_identity()
+            
+            # 檢查平台權限
+            perm_result, perm_flag = self.ac.check_platform_permission(current_user_id, 'platform_admin')
+            if not perm_flag or not perm_result.get('has_permission'):
+                return fail_response_result(msg="權限不足，需要平台管理員權限")
+            
+            # 獲取查詢參數
+            page = request.args.get('page', 1, type=int)
+            size = request.args.get('size', 20, type=int)
+            
+            # 過濾條件
+            filters = {}
+            if request.args.get('status'):
+                filters['status'] = request.args.get('status')
+            if request.args.get('platform_role'):
+                filters['platform_role'] = request.args.get('platform_role')
+            if request.args.get('email_verified'):
+                filters['email_verified'] = request.args.get('email_verified') == 'true'
+            if request.args.get('search'):
+                filters['search'] = request.args.get('search')
+            
+            result, flag = self.ac.get_users_list(page, size, filters)
+            return self._build_response(result, flag, "獲取用戶列表成功")
+        except Exception as e:
+            logger.error(f"獲取用戶列表異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/admin/users/<user_id>/platform-role")
+class AdminUpdatePlatformRoleApi(BaseAuthView):
+    """更新用戶平台角色API"""
+
+    @jwt_required()
+    @blp.response(200, RspMsgDictSchema)
+    def put(self, user_id):
+        """更新用戶平台角色（平台管理員）"""
+        try:
+            current_user_id = get_jwt_identity()
+            
+            # 檢查平台權限
+            perm_result, perm_flag = self.ac.check_platform_permission(current_user_id, 'platform_admin')
+            if not perm_flag or not perm_result.get('has_permission'):
+                return fail_response_result(msg="權限不足，需要平台管理員權限")
+            
+            # 獲取新角色
+            data = request.get_json()
+            new_role = data.get('platform_role')
+            if not new_role:
+                return fail_response_result(msg="缺少platform_role參數")
+            
+            result, flag = self.ac.update_user_platform_role(current_user_id, user_id, new_role)
+            return self._build_response(result, flag, "更新平台角色成功")
+        except Exception as e:
+            logger.error(f"更新平台角色異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/admin/users/<user_id>/suspend")
+class AdminSuspendUserApi(BaseAuthView):
+    """暫停用戶API"""
+
+    @jwt_required()
+    @blp.response(200, RspMsgDictSchema)
+    def post(self, user_id):
+        """暫停用戶（平台管理員）"""
+        try:
+            current_user_id = get_jwt_identity()
+            
+            # 檢查平台權限
+            perm_result, perm_flag = self.ac.check_platform_permission(current_user_id, 'platform_admin')
+            if not perm_flag or not perm_result.get('has_permission'):
+                return fail_response_result(msg="權限不足，需要平台管理員權限")
+            
+            # 獲取暫停原因
+            data = request.get_json() or {}
+            reason = data.get('reason', '管理員暫停')
+            
+            result, flag = self.ac.suspend_user(current_user_id, user_id, reason)
+            return self._build_response(result, flag, "暫停用戶成功")
+        except Exception as e:
+            logger.error(f"暫停用戶異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/auth/admin/users/<user_id>/activate")
+class AdminActivateUserApi(BaseAuthView):
+    """激活用戶API"""
+
+    @jwt_required()
+    @blp.response(200, RspMsgDictSchema)
+    def post(self, user_id):
+        """激活用戶（平台管理員）"""
+        try:
+            current_user_id = get_jwt_identity()
+            
+            # 檢查平台權限
+            perm_result, perm_flag = self.ac.check_platform_permission(current_user_id, 'platform_admin')
+            if not perm_flag or not perm_result.get('has_permission'):
+                return fail_response_result(msg="權限不足，需要平台管理員權限")
+            
+            result, flag = self.ac.activate_user(current_user_id, user_id)
+            return self._build_response(result, flag, "激活用戶成功")
+        except Exception as e:
+            logger.error(f"激活用戶異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
 # ==================== 内部服务API ====================
 
 @blp.route("/internal/validate-token")
@@ -456,6 +619,7 @@ class InternalUserInfoApi(BaseAuthView):
                     'email': user_info.get('email'),
                     'display_name': user_info.get('display_name'),
                     'status': user_info.get('status'),
+                    'platform_role': user_info.get('platform_role', 'platform_user'),
                     'avatar_url': user_info.get('avatar_url'),
                     'created_at': user_info.get('created_at')
                 }
@@ -480,6 +644,28 @@ class InternalUserBatchApi(BaseAuthView):
             return self._build_response(result, flag, "批量獲取用戶信息成功")
         except Exception as e:
             logger.error(f"內部服務批量獲取用戶信息異常: {str(e)}")
+            return fail_response_result(msg="系統內部錯誤，請稍後重試")
+
+
+@blp.route("/internal/check-platform-permission")
+class InternalCheckPlatformPermissionApi(BaseAuthView):
+    """內部服務檢查平台權限API"""
+
+    @blp.response(200, RspMsgDictSchema)
+    def post(self):
+        """檢查平台權限"""
+        try:
+            data = request.get_json()
+            user_id = data.get('user_id')
+            required_role = data.get('required_role', 'platform_admin')
+            
+            if not user_id:
+                return fail_response_result(msg="缺少user_id參數")
+            
+            result, flag = self.ac.check_platform_permission(user_id, required_role)
+            return self._build_response(result, flag, "檢查平台權限成功")
+        except Exception as e:
+            logger.error(f"內部服務檢查平台權限異常: {str(e)}")
             return fail_response_result(msg="系統內部錯誤，請稍後重試")
 
 

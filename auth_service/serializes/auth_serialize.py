@@ -10,7 +10,7 @@ from marshmallow import Schema, fields, validate, validates_schema, ValidationEr
 from dbs.mysql_db import CommonModelDbSchema
 from dbs.mysql_db.model_tables import (
     UserModel, UserSessionModel, LoginAttemptModel, 
-    UserRoleModel, OAuthProviderModel
+    OAuthProviderModel
 )
 from marshmallow import post_load
 
@@ -211,14 +211,6 @@ class UserModelSchema(CommonModelDbSchema):
         load_instance = True
 
 
-class RefreshTokenModelSchema(CommonModelDbSchema):
-    """刷新令牌模型Schema"""
-    __modelclass__ = RefreshTokenModel
-    
-    token_hash = fields.String(load_only=True)  # 敏感信息不输出
-    
-    class Meta:
-        load_instance = True
 
 
 # ==================== 新增的Schema ====================
@@ -405,6 +397,7 @@ class UserInfoSchema(Schema):
     phone = fields.String(metadata={"description": "手機號"})
     avatar_url = fields.String(metadata={"description": "頭像URL"})
     status = fields.String(metadata={"description": "用戶狀態"})
+    platform_role = fields.String(metadata={"description": "平台角色"})
     email_verified = fields.Boolean(metadata={"description": "郵箱是否已驗證"})
     phone_verified = fields.Boolean(metadata={"description": "手機是否已驗證"})
     two_factor_enabled = fields.Boolean(metadata={"description": "是否啟用雙重認證"})

@@ -17,7 +17,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from common.common_tools import CommonTools, TryExcept
 from dbs.mysql_db import db
 from dbs.mysql_db.model_tables import (
-    UserModel, UserSessionModel, UserRoleModel, UserRoleAssignmentModel,
+    UserModel, UserSessionModel,
     LoginAttemptModel, OAuthProviderModel, UserOAuthAccountModel
 )
 
@@ -89,7 +89,7 @@ class OperUserModel:
         allowed_fields = [
             'display_name', 'phone', 'avatar_url', 'email_verified',
             'phone_verified', 'timezone', 'language', 'preferences',
-            'status', 'failed_login_attempts', 'locked_until'
+            'status', 'failed_login_attempts', 'locked_until', 'platform_role'
         ]
         
         for field, value in update_data.items():
@@ -274,89 +274,6 @@ class OperUserSessionModel:
         return len(expired_sessions)
 
 
-class OperUserRoleModel:
-    """用户角色模型操作类"""
-    
-    def __init__(self):
-        self.model = UserRoleModel
-        self.assignment_model = UserRoleAssignmentModel
-    
-    @TryExcept("創建角色失敗")
-    def create_role(self, role_data):
-        """创建角色"""
-        db.session.add(role_data)
-        return True
-    
-    def get_by_id(self, role_id):
-        """根据ID获取角色"""
-        return self.model.query.filter(self.model.id == role_id).first()
-    
-    def get_by_name(self, name):
-        """根据名称获取角色"""
-        return self.model.query.filter(self.model.name == name).first()
-    
-    def get_all_roles(self):
-        """获取所有角色"""
-        return self.model.query.all()
-    
-    def get_user_roles(self, user_id):
-        """获取用户的角色"""
-        current_time = datetime.now()
-        return db.session.query(self.model).join(
-            self.assignment_model,
-            self.model.id == self.assignment_model.role_id
-        ).filter(
-            and_(
-                self.assignment_model.user_id == user_id,
-                or_(
-                    self.assignment_model.expires_at.is_(None),
-                    self.assignment_model.expires_at > current_time
-                )
-            )
-        ).all()
-    
-    @TryExcept("分配角色失敗")
-    def assign_role_to_user(self, user_id, role_id, assigned_by, expires_at=None):
-        """分配角色给用户"""
-        # 检查是否已存在
-        existing = self.assignment_model.query.filter(
-            and_(
-                self.assignment_model.user_id == user_id,
-                self.assignment_model.role_id == role_id
-            )
-        ).first()
-        
-        if existing:
-            # 更新过期时间
-            existing.expires_at = expires_at
-            existing.assigned_by = assigned_by
-            existing.assigned_at = datetime.now()
-        else:
-            # 创建新分配
-            assignment = self.assignment_model(
-                user_id=user_id,
-                role_id=role_id,
-                assigned_by=assigned_by,
-                expires_at=expires_at
-            )
-            db.session.add(assignment)
-        
-        return True
-    
-    @TryExcept("撤銷角色失敗")
-    def revoke_role_from_user(self, user_id, role_id):
-        """撤销用户角色"""
-        assignment = self.assignment_model.query.filter(
-            and_(
-                self.assignment_model.user_id == user_id,
-                self.assignment_model.role_id == role_id
-            )
-        ).first()
-        
-        if assignment:
-            db.session.delete(assignment)
-        
-        return True
 
 
 class OperLoginAttemptModel:
