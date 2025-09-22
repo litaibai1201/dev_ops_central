@@ -522,3 +522,109 @@ class LoginAttemptModelSchema(CommonModelDbSchema):
     
     class Meta:
         load_instance = True
+
+
+# ==================== 管理员和平台相关Schema ====================
+
+class UserProfileUpdateSchema(Schema):
+    """用户档案更新请求参数"""
+    display_name = fields.String(
+        validate=validate.Length(max=255),
+        metadata={"description": "显示名称"}
+    )
+    phone = fields.String(
+        validate=validate.And(
+            validate.Length(max=20),
+            validate.Regexp(r'^[0-9+\-\s()]*$', error="手机号格式不正确")
+        ),
+        metadata={"description": "手机号"}
+    )
+    avatar_url = fields.String(
+        validate=validate.Length(max=500),
+        metadata={"description": "头像URL"}
+    )
+    timezone = fields.String(
+        validate=validate.Length(max=50),
+        metadata={"description": "时区"}
+    )
+    language = fields.String(
+        validate=validate.Length(max=10),
+        metadata={"description": "语言偏好"}
+    )
+    preferences = fields.Dict(
+        metadata={"description": "用户偏好设置"}
+    )
+
+
+class AdminUsersQuerySchema(Schema):
+    """管理员获取用户列表查询参数"""
+    page = fields.Int(
+        load_default=1,
+        validate=validate.Range(min=1),
+        metadata={"description": "页码"}
+    )
+    size = fields.Int(
+        load_default=20,
+        validate=validate.Range(min=1, max=100),
+        metadata={"description": "每页数量"}
+    )
+    status = fields.String(
+        validate=validate.OneOf(['active', 'suspended', 'inactive']),
+        metadata={"description": "用户状态过滤"}
+    )
+    platform_role = fields.String(
+        validate=validate.OneOf(['platform_admin', 'platform_user']),
+        metadata={"description": "平台角色过滤"}
+    )
+    email_verified = fields.Boolean(
+        metadata={"description": "邮箱验证状态过滤"}
+    )
+    search = fields.String(
+        validate=validate.Length(max=100),
+        metadata={"description": "搜索关键词"}
+    )
+
+
+class UpdatePlatformRoleSchema(Schema):
+    """更新用户平台角色请求参数"""
+    platform_role = fields.String(
+        required=True,
+        validate=validate.OneOf(['platform_admin', 'platform_user']),
+        metadata={"description": "新的平台角色"}
+    )
+
+
+class SuspendUserSchema(Schema):
+    """暂停用户请求参数"""
+    reason = fields.String(
+        load_default="管理员暂停",
+        validate=validate.Length(max=500),
+        metadata={"description": "暂停原因"}
+    )
+
+
+class InternalCheckPlatformPermissionSchema(Schema):
+    """内部服务检查平台权限请求参数"""
+    user_id = fields.String(
+        required=True,
+        validate=validate.Length(min=1),
+        metadata={"description": "用户ID"}
+    )
+    required_role = fields.String(
+        load_default="platform_admin",
+        validate=validate.OneOf(['platform_admin', 'platform_user']),
+        metadata={"description": "所需角色"}
+    )
+
+
+class CacheWarmUpSchema(Schema):
+    """缓存预热请求参数"""
+    user_ids = fields.List(
+        fields.String(),
+        metadata={"description": "用户ID列表"}
+    )
+    limit = fields.Int(
+        load_default=100,
+        validate=validate.Range(min=1, max=1000),
+        metadata={"description": "预热数量限制"}
+    )

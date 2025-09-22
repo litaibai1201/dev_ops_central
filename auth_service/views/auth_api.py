@@ -19,7 +19,9 @@ from serializes.auth_serialize import (
     SessionRevokeSchema, ForgotPasswordSchema, ResetPasswordSchema,
     ChangePasswordSchema, EmailVerificationSchema, TwoFactorSetupSchema,
     TwoFactorVerifySchema, TwoFactorDisableSchema, InternalTokenValidateSchema,
-    UserBatchRequestSchema
+    UserBatchRequestSchema, UserProfileUpdateSchema, AdminUsersQuerySchema,
+    UpdatePlatformRoleSchema, SuspendUserSchema, InternalCheckPlatformPermissionSchema,
+    CacheWarmUpSchema
 )
 from common.common_tools import CommonTools
 from loggers import logger
@@ -120,18 +122,17 @@ class UserProfileApi(BaseAuthView):
             return fail_response_result(msg="系統內部錯誤，請稍後重試")
     
     @jwt_required()
+    @blp.arguments(UserProfileUpdateSchema)
     @blp.response(200, RspMsgDictSchema)
-    def put(self):
+    def put(self, payload):
         """更新用戶信息"""
         try:
             current_user_id = get_jwt_identity()
             if not current_user_id:
                 return fail_response_result(msg="無效的用戶身份")
             
-            # 獲取更新數據
-            data = request.get_json()
-            allowed_fields = ['display_name', 'phone', 'avatar_url', 'timezone', 'language', 'preferences']
-            update_data = {k: v for k, v in data.items() if k in allowed_fields}
+            # 過濾掉空值
+            update_data = {k: v for k, v in payload.items() if v is not None}
             
             if not update_data:
                 return fail_response_result(msg="沒有可更新的字段")
@@ -470,8 +471,9 @@ class AdminUsersListApi(BaseAuthView):
     """平台管理員獲取用戶列表API"""
 
     @jwt_required()
+    @blp.arguments(AdminUsersQuerySchema, location="query")
     @blp.response(200, RspMsgDictSchema)
-    def get(self):
+    def get(self, query_params):
         """獲取用戶列表（平台管理員）"""
         try:
             current_user_id = get_jwt_identity()
@@ -482,19 +484,19 @@ class AdminUsersListApi(BaseAuthView):
                 return fail_response_result(msg="權限不足，需要平台管理員權限")
             
             # 獲取查詢參數
-            page = request.args.get('page', 1, type=int)
-            size = request.args.get('size', 20, type=int)
+            page = query_params.get('page', 1)
+            size = query_params.get('size', 20)
             
             # 過濾條件
             filters = {}
-            if request.args.get('status'):
-                filters['status'] = request.args.get('status')
-            if request.args.get('platform_role'):
-                filters['platform_role'] = request.args.get('platform_role')
-            if request.args.get('email_verified'):
-                filters['email_verified'] = request.args.get('email_verified') == 'true'
-            if request.args.get('search'):
-                filters['search'] = request.args.get('search')
+            if query_params.get('status'):
+                filters['status'] = query_params.get('status')
+            if query_params.get('platform_role'):
+                filters['platform_role'] = query_params.get('platform_role')
+            if query_params.get('email_verified') is not None:
+                filters['email_verified'] = query_params.get('email_verified')
+            if query_params.get('search'):
+                filters['search'] = query_params.get('search')
             
             result, flag = self.ac.get_users_list(page, size, filters)
             return self._build_response(result, flag, "獲取用戶列表成功")
@@ -508,8 +510,9 @@ class AdminUpdatePlatformRoleApi(BaseAuthView):
     """更新用戶平台角色API"""
 
     @jwt_required()
+    @blp.arguments(UpdatePlatformRoleSchema)
     @blp.response(200, RspMsgDictSchema)
-    def put(self, user_id):
+    def put(self, payload, user_id):
         """更新用戶平台角色（平台管理員）"""
         try:
             current_user_id = get_jwt_identity()
@@ -520,10 +523,7 @@ class AdminUpdatePlatformRoleApi(BaseAuthView):
                 return fail_response_result(msg="權限不足，需要平台管理員權限")
             
             # 獲取新角色
-            data = request.get_json()
-            new_role = data.get('platform_role')
-            if not new_role:
-                return fail_response_result(msg="缺少platform_role參數")
+            new_role = payload.get('platform_role')
             
             result, flag = self.ac.update_user_platform_role(current_user_id, user_id, new_role)
             return self._build_response(result, flag, "更新平台角色成功")
@@ -537,8 +537,9 @@ class AdminSuspendUserApi(BaseAuthView):
     """暫停用戶API"""
 
     @jwt_required()
+    @blp.arguments(SuspendUserSchema)
     @blp.response(200, RspMsgDictSchema)
-    def post(self, user_id):
+    def post(self, payload, user_id):
         """暫停用戶（平台管理員）"""
         try:
             current_user_id = get_jwt_identity()
@@ -549,8 +550,7 @@ class AdminSuspendUserApi(BaseAuthView):
                 return fail_response_result(msg="權限不足，需要平台管理員權限")
             
             # 獲取暫停原因
-            data = request.get_json() or {}
-            reason = data.get('reason', '管理員暫停')
+            reason = payload.get('reason', '管理員暫停')
             
             result, flag = self.ac.suspend_user(current_user_id, user_id, reason)
             return self._build_response(result, flag, "暫停用戶成功")
@@ -651,16 +651,13 @@ class InternalUserBatchApi(BaseAuthView):
 class InternalCheckPlatformPermissionApi(BaseAuthView):
     """內部服務檢查平台權限API"""
 
+    @blp.arguments(InternalCheckPlatformPermissionSchema)
     @blp.response(200, RspMsgDictSchema)
-    def post(self):
+    def post(self, payload):
         """檢查平台權限"""
         try:
-            data = request.get_json()
-            user_id = data.get('user_id')
-            required_role = data.get('required_role', 'platform_admin')
-            
-            if not user_id:
-                return fail_response_result(msg="缺少user_id參數")
+            user_id = payload.get('user_id')
+            required_role = payload.get('required_role', 'platform_admin')
             
             result, flag = self.ac.check_platform_permission(user_id, required_role)
             return self._build_response(result, flag, "檢查平台權限成功")
@@ -737,13 +734,14 @@ class CacheStatsApi(BaseAuthView):
 class CacheWarmUpApi(BaseAuthView):
     """缓存预热API"""
 
+    @blp.arguments(CacheWarmUpSchema)
     @blp.response(200, RspMsgDictSchema)
-    def post(self):
+    def post(self, payload):
         """缓存预热"""
         try:
             # 可以从请求参数获取用户ID列表和限制数量
-            user_ids = request.json.get('user_ids') if request.json else None
-            limit = request.json.get('limit', 100) if request.json else 100
+            user_ids = payload.get('user_ids')
+            limit = payload.get('limit', 100)
             
             result, flag = self.ac.warm_up_cache(user_ids, limit)
             return self._build_response(result, flag, "緩存預熱成功")
